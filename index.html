@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Income & Expense Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="#">
+        <div class="logo-icon">₨</div>
+        Tracker
+      </a>
+      <nav>
+        <button class="nav-btn" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="add" id="nav-add-btn">Add</button>
+        <button class="nav-btn" data-tab="history">History</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="view" id="view-dashboard">
+
+      <div class="period-bar">
+        <span class="period-bar-label">Showing: <span id="period-label">Last 6 months</span></span>
+        <div class="period-btns">
+          <button class="period-btn" data-period="1d">Today</button>
+          <button class="period-btn" data-period="1w">Week</button>
+          <button class="period-btn" data-period="1m">Month</button>
+          <button class="period-btn active" data-period="6m">6 months</button>
+          <button class="period-btn" data-period="1y">Year</button>
+        </div>
+      </div>
+
+      <div class="totals-strip">
+        <span class="totals-label">All-time total</span>
+        <div class="totals-inner">
+          <div class="total-item">
+            <div class="total-item-label">Income</div>
+            <div class="total-item-val inc" id="total-income">Nrs 0</div>
+          </div>
+          <div class="total-item">
+            <div class="total-item-label">Expense</div>
+            <div class="total-item-val exp" id="total-expense">Nrs 0</div>
+          </div>
+          <div class="total-item">
+            <div class="total-item-label">Net</div>
+            <div class="total-item-val net" id="total-net">Nrs 0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accounts-row">
+        <div class="account-card digital">
+          <div class="account-label">💳 Digital account</div>
+          <div class="account-balance" id="bal-digital">Nrs 0</div>
+          <div class="account-meta">
+            <span><span class="dot-in"></span> In: <strong id="digital-in">Nrs 0</strong></span>
+            <span><span class="dot-out"></span> Out: <strong id="digital-out">Nrs 0</strong></span>
+          </div>
+        </div>
+        <div class="account-card cash">
+          <div class="account-label">💵 Cash account</div>
+          <div class="account-balance" id="bal-cash">Nrs 0</div>
+          <div class="account-meta">
+            <span><span class="dot-in"></span> In: <strong id="cash-in">Nrs 0</strong></span>
+            <span><span class="dot-out"></span> Out: <strong id="cash-out">Nrs 0</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-strip">
+        <div class="strip-card">
+          <div class="strip-label" id="strip-label-income">Total — income</div>
+          <div class="strip-value income" id="stat-income">Nrs 0</div>
+        </div>
+        <div class="strip-card">
+          <div class="strip-label" id="strip-label-expense">Total — expense</div>
+          <div class="strip-value expense" id="stat-expense">Nrs 0</div>
+        </div>
+        <div class="strip-card">
+          <div class="strip-label" id="strip-label-net">Net</div>
+          <div class="strip-value net" id="stat-net">Nrs 0</div>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <div class="section-label" id="chart-title">Last 6 months</div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#bfdbfe"></div> Income</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fca5a5"></div> Expense</div>
+        </div>
+        <canvas id="mainChart"></canvas>
+      </div>
+
+      <div class="cat-section">
+        <div class="cat-tabs">
+          <button class="cat-tab active" data-type="income">By income category</button>
+          <button class="cat-tab" data-type="expense">By expense category</button>
+        </div>
+        <div id="catBreakdown"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-add">
+      <div class="form-card">
+        <div class="form-title" id="form-view-title">Add transaction</div>
+        <div class="type-switcher" id="form-type-switcher">
+          <button type="button" class="type-btn active income" data-type="income">+ Income</button>
+          <button type="button" class="type-btn" data-type="expense">− Expense</button>
+          <button type="button" class="type-btn" data-type="transfer">↔ Transfer</button>
+        </div>
+        <div class="transfer-note" id="transfer-note" style="display:none">
+          Use this to move money between accounts — e.g. ATM withdrawal from digital to cash.
+        </div>
+        <form id="txForm" novalidate>
+          <div class="field">
+            <label for="f-source" id="source-label">Source / description</label>
+            <input id="f-source" type="text" placeholder="e.g. Monthly salary, Freelance payment" required>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-amount">Amount (Nrs)</label>
+              <input id="f-amount" type="text" inputmode="numeric" placeholder="e.g. 5000, 10k, 1.5K" required>
+              <div class="input-hint">Supports: 5000 · 5,000 · 10k · 10K · 1.5k</div>
+            </div>
+            <div class="field">
+              <label for="f-date">Date</label>
+              <input id="f-date" type="date" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-account" id="account-label">Account</label>
+              <select id="f-account">
+                <option value="digital">💳 Digital</option>
+                <option value="cash">💵 Cash</option>
+              </select>
+            </div>
+            <div class="field" id="to-account-field" style="display:none">
+              <label for="f-to-account">To account</label>
+              <select id="f-to-account">
+                <option value="cash">💵 Cash</option>
+                <option value="digital">💳 Digital</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" id="category-field-block">
+            <label for="f-category">Category</label>
+            <div class="category-input-group">
+              <select id="f-category"></select>
+              <button type="button" class="btn btn-ghost" id="btn-add-custom-cat" title="Create Custom Category">+</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-note">Note <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
+            <textarea id="f-note" placeholder="Any extra detail…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary green" id="submit-btn">Save income</button>
+            <button type="button" class="btn btn-ghost" id="btn-reset">Clear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="view" id="view-history">
+      <div class="history-controls">
+        <div class="search-bar-wrap">
+          <input type="text" id="search-history" placeholder="Search by description or note...">
+        </div>
+        <div class="filters">
+          <select id="filter-type">
+            <option value="">All types</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+            <option value="transfer">Transfer</option>
+          </select>
+          <select id="filter-account">
+            <option value="">All accounts</option>
+            <option value="digital">Digital</option>
+            <option value="cash">Cash</option>
+          </select>
+          <select id="filter-month">
+            <option value="">All months</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="history-list" id="historyList">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No entries yet. Add one from the <strong>Add</strong> tab.</p>
+        </div>
+      </div>
+
+      <div class="backup-section">
+        <div class="backup-title">Data Backup & Restore</div>
+        <div class="backup-buttons">
+          <button type="button" class="btn btn-ghost" id="btn-export">📤 Export Data (JSON)</button>
+          <label class="btn btn-ghost" id="btn-import-label">
+            📥 Import Data (JSON)
+            <input type="file" id="file-import" accept=".json" style="display: none;">
+          </label>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
