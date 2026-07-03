@@ -134,9 +134,29 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+function closeMobileNav() {
+  const nav = el('main-nav');
+  const toggle = el('menu-toggle');
+  const backdrop = el('nav-backdrop');
+  nav.classList.remove('open');
+  toggle.setAttribute('aria-expanded', 'false');
+  backdrop.classList.remove('show');
+}
+
+function toggleMobileNav() {
+  const nav = el('main-nav');
+  const toggle = el('menu-toggle');
+  const backdrop = el('nav-backdrop');
+  const willOpen = !nav.classList.contains('open');
+  nav.classList.toggle('open', willOpen);
+  toggle.setAttribute('aria-expanded', String(willOpen));
+  backdrop.classList.toggle('show', willOpen);
+}
+
 function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.view').forEach(v  => v.classList.toggle('active', v.id === 'view-'+name));
+  closeMobileNav();
   if (name === 'dashboard') renderDashboard();
   if (name === 'history')   renderHistory();
   if (name === 'nepal')     renderNepal();
@@ -808,6 +828,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.cat-tab').forEach(b  => b.addEventListener('click', ()=>renderCatSection(b.dataset.type)));
   document.querySelectorAll('.period-btn').forEach(b => b.addEventListener('click', ()=>setPeriod(b.dataset.period)));
   el('btn-apply-range').addEventListener('click', applyCustomRange);
+
+  // Mobile hamburger menu hooks
+  el('menu-toggle').addEventListener('click', toggleMobileNav);
+  el('nav-backdrop').addEventListener('click', closeMobileNav);
+  window.addEventListener('resize', ()=>{ if(window.innerWidth > 768) closeMobileNav(); });
 
   el('txForm').addEventListener('submit', handleForm);
   el('btn-add-custom-cat').addEventListener('click', handleCustomCategory);

@@ -14,14 +14,18 @@
         <div class="logo-icon">₨</div>
         Tracker
       </a>
-      <nav>
+      <nav id="main-nav">
         <button class="nav-btn" data-tab="dashboard">Dashboard</button>
         <button class="nav-btn" data-tab="add" id="nav-add-btn">Add</button>
         <button class="nav-btn" data-tab="history">History</button>
         <button class="nav-btn" data-tab="nepal">🇳🇵 Nepal</button>
       </nav>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="main-nav">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
+  <div class="nav-backdrop" id="nav-backdrop"></div>
 
   <main>
     <div class="view" id="view-dashboard">
