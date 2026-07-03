@@ -26,8 +26,12 @@ const DEFAULT_EXPENSE_CATS = {
 let records = JSON.parse(localStorage.getItem(KEY_RECORDS) || '[]');
 let customCats = JSON.parse(localStorage.getItem(KEY_CATS) || '{"income":{},"expense":{}}');
 let chartPeriod = '6m';
-let editingRecordId = null; 
+let customRange = { from: null, to: null };
+let editingRecordId = null;
+let editingNepalId = null;
 let activeType = 'income';
+let historyShowAll = false;
+const HISTORY_PREVIEW_LIMIT = 5;
 
 function save() { 
   localStorage.setItem(KEY_RECORDS, JSON.stringify(records)); 
@@ -69,6 +73,11 @@ function el(id)  { return document.getElementById(id); }
 function periodRange(period) {
   const now = new Date();
   let start;
+  if (period === 'custom' && customRange.from && customRange.to) {
+    start = new Date(customRange.from); start.setHours(0,0,0,0);
+    const end = new Date(customRange.to); end.setHours(23,59,59,999);
+    return [start, end];
+  }
   switch (period) {
     case '1d': start = new Date(now); start.setHours(0,0,0,0); break;
     case '1w': {
@@ -96,10 +105,11 @@ function accountBalance(account, excludeId = null) {
   let bal = 0;
   records.forEach(r => {
     if (excludeId && r.id === excludeId) return; // Skip temporary record for accurate adjustment
-    if (r.type === 'income'   && r.account === account)   bal += r.amount;
-    if (r.type === 'expense'  && r.account === account)   bal -= r.amount;
-    if (r.type === 'transfer' && r.account === account)   bal -= r.amount;
-    if (r.type === 'transfer' && r.toAccount === account) bal += r.amount;
+    if (r.type === 'income'     && r.account === account)   bal += r.amount;
+    if (r.type === 'expense'    && r.account === account)   bal -= r.amount;
+    if (r.type === 'remittance' && r.account === account)   bal -= r.amount;
+    if (r.type === 'transfer'   && r.account === account)   bal -= r.amount;
+    if (r.type === 'transfer'   && r.toAccount === account) bal += r.amount;
   });
   return bal;
 }
@@ -107,10 +117,11 @@ function accountBalance(account, excludeId = null) {
 function accountInOut(account) {
   let inAmt = 0, outAmt = 0;
   records.forEach(r => {
-    if (r.type === 'income'   && r.account === account)   inAmt  += r.amount;
-    if (r.type === 'expense'  && r.account === account)   outAmt += r.amount;
-    if (r.type === 'transfer' && r.account === account)   outAmt += r.amount;
-    if (r.type === 'transfer' && r.toAccount === account) inAmt  += r.amount;
+    if (r.type === 'income'     && r.account === account)   inAmt  += r.amount;
+    if (r.type === 'expense'    && r.account === account)   outAmt += r.amount;
+    if (r.type === 'remittance' && r.account === account)   outAmt += r.amount;
+    if (r.type === 'transfer'   && r.account === account)   outAmt += r.amount;
+    if (r.type === 'transfer'   && r.toAccount === account) inAmt  += r.amount;
   });
   return { inAmt, outAmt };
 }
@@ -128,13 +139,43 @@ function switchTab(name) {
   document.querySelectorAll('.view').forEach(v  => v.classList.toggle('active', v.id === 'view-'+name));
   if (name === 'dashboard') renderDashboard();
   if (name === 'history')   renderHistory();
+  if (name === 'nepal')     renderNepal();
 }
 
 function setPeriod(p) {
+  if (p === 'custom') {
+    const bar = el('custom-range-bar');
+    const willShow = bar.style.display === 'none';
+    bar.style.display = willShow ? 'flex' : 'none';
+    if (willShow) {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === 'custom'));
+    } else {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === chartPeriod));
+    }
+    return;
+  }
+  el('custom-range-bar').style.display = 'none';
   chartPeriod = p;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
   const labels = { '1d':'Today', '1w':'This week', '1m':'This month', '6m':'Last 6 months', '1y':'This year' };
   const lbl = labels[p] || '';
+  el('period-label').textContent  = lbl;
+  el('chart-title').textContent   = lbl;
+  el('strip-label-income').textContent  = lbl + ' — income';
+  el('strip-label-expense').textContent = lbl + ' — expense';
+  el('strip-label-net').textContent     = lbl + ' — net';
+  renderDashboard();
+}
+
+function applyCustomRange() {
+  const from = el('range-from').value;
+  const to   = el('range-to').value;
+  if (!from || !to) { showToast('Pick both From and To dates'); return; }
+  if (from > to) { showToast('From date must be before To date'); return; }
+  customRange = { from, to };
+  chartPeriod = 'custom';
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === 'custom'));
+  const lbl = `${new Date(from).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(to).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
   el('period-label').textContent  = lbl;
   el('chart-title').textContent   = lbl;
   el('strip-label-income').textContent  = lbl + ' — income';
@@ -203,7 +244,7 @@ function renderChart() {
   const maxVal = Math.max(...buckets.map(b=>Math.max(b.inc,b.exp)), 1);
   const pL=10, pR=10, pT=20, pB=36;
   const cW = W-pL-pR, cH = H-pT-pB;
-  const grpW = cW / buckets.length;
+  const grpW = buckets.length ? cW / buckets.length : cW;
   const bW   = Math.max(4, Math.floor(grpW*(buckets.length<=7?0.28:0.38)));
 
   buckets.forEach((b,i) => {
@@ -266,6 +307,51 @@ function buildBuckets(period) {
       buckets.push({ label:d.toLocaleString('en-US',{month:'short'}), inc:0, exp:0, matches(iso) {
         const dt=new Date(iso); return dt.getFullYear()===y && dt.getMonth()===m;
       }});
+    }
+  } else if (period === 'custom' && customRange.from && customRange.to) {
+    const start = new Date(customRange.from);
+    const end   = new Date(customRange.to);
+    const dayMs = 86400000;
+    const spanDays = Math.round((end - start) / dayMs) + 1;
+
+    if (spanDays <= 1) {
+      const dayIso = customRange.from;
+      for (let h=0; h<24; h+=4) {
+        const label = h===0?'12am': h<12?h+'am': h===12?'12pm':(h-12)+'pm';
+        buckets.push({ label, inc:0, exp:0, matches(iso) {
+          const d=new Date(iso);
+          return iso.slice(0,10)===dayIso && d.getHours()>=h && d.getHours()<h+4;
+        }});
+      }
+    } else if (spanDays <= 14) {
+      for (let i=0; i<spanDays; i++) {
+        const d = new Date(start); d.setDate(start.getDate()+i);
+        const iso = d.toISOString().slice(0,10);
+        buckets.push({ label: d.toLocaleDateString('en-US',{month:'short',day:'numeric'}), inc:0, exp:0, matches:(r)=>r.slice(0,10)===iso });
+      }
+    } else if (spanDays <= 90) {
+      let cur = new Date(start);
+      while (cur <= end) {
+        const wkStart = new Date(cur);
+        let wkEnd = new Date(cur); wkEnd.setDate(wkEnd.getDate()+6);
+        if (wkEnd > end) wkEnd = new Date(end);
+        const label = wkStart.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        buckets.push({ label, inc:0, exp:0, matches(iso) {
+          const d = new Date(iso);
+          return d >= wkStart && d <= wkEnd;
+        }});
+        cur.setDate(cur.getDate()+7);
+      }
+    } else {
+      let y = start.getFullYear(), m = start.getMonth();
+      const endY = end.getFullYear(), endM = end.getMonth();
+      while (y < endY || (y === endY && m <= endM)) {
+        const yy=y, mm=m;
+        buckets.push({ label: new Date(yy,mm,1).toLocaleString('en-US',{month:'short'}), inc:0, exp:0, matches(iso) {
+          const dt=new Date(iso); return dt.getFullYear()===yy && dt.getMonth()===mm;
+        }});
+        m++; if (m>11){m=0;y++;}
+      }
     }
   }
   return buckets;
@@ -419,7 +505,7 @@ function handleForm(e) {
 // History & Filtering
 function startEdit(id) {
   const r = records.find(rec => rec.id === id);
-  if (!r) return;
+  if (!r || r.type === 'remittance') return;
 
   editingRecordId = r.id;
   switchTab('add');
@@ -447,20 +533,24 @@ function renderHistory() {
   const typeF    = el('filter-type').value;
   const accountF = el('filter-account').value;
   const monthF   = el('filter-month').value;
+  const fromF    = el('filter-date-from').value;
+  const toF      = el('filter-date-to').value;
   const searchQ  = el('search-history').value.toLowerCase().trim();
 
   const filtered = records.filter(r=>{
     const tOk=!typeF||r.type===typeF;
     const aOk=!accountF||r.account===accountF||r.toAccount===accountF;
     const mOk=!monthF||mk(r.date)===monthF;
-    
+    const dOk=(!fromF||r.date>=fromF)&&(!toF||r.date<=toF);
+
     // Multi-parameter Text Filter evaluation
     const matchesSearch = !searchQ || 
       (r.source && r.source.toLowerCase().includes(searchQ)) || 
       (r.note && r.note.toLowerCase().includes(searchQ)) ||
-      (r.category && r.category.toLowerCase().includes(searchQ));
+      (r.category && r.category.toLowerCase().includes(searchQ)) ||
+      (r.recipient && r.recipient.toLowerCase().includes(searchQ));
 
-    return tOk&&aOk&&mOk&&matchesSearch;
+    return tOk&&aOk&&mOk&&dOk&&matchesSearch;
   });
 
   const list=el('historyList');
@@ -470,21 +560,28 @@ function renderHistory() {
     return;
   }
 
-  filtered.forEach(r=>{
+  // Only show a short preview until the user searches/filters, or asks to see all
+  const hasActiveFilter = !!(typeF || accountF || monthF || fromF || toF || searchQ);
+  const shouldLimit = !hasActiveFilter && !historyShowAll && filtered.length > HISTORY_PREVIEW_LIMIT;
+  const visible = shouldLimit ? filtered.slice(0, HISTORY_PREVIEW_LIMIT) : filtered;
+
+  visible.forEach(r=>{
     const isTransfer=r.type==='transfer';
-    const cats   = r.type==='income'?getIncomeCats():getExpenseCats();
+    const isRemit=r.type==='remittance';
+    const cats   = r.type==='income'?getIncomeCats():r.type==='expense'?getExpenseCats():{};
     const catMeta= cats[r.category]||{};
-    const icon   = isTransfer?'↔':catMeta.icon||'•';
-    const label  = isTransfer?`Transfer: ${r.account} → ${r.toAccount}`:catMeta.label||r.category;
-    const amtSign= r.type==='expense'?'− ':'+ ';
-    const amtClass=isTransfer?'transfer':r.type;
+    const icon   = isTransfer?'↔':isRemit?'🇳🇵':catMeta.icon||'•';
+    const label  = isTransfer?`Transfer: ${r.account} → ${r.toAccount}`:isRemit?`Sent to Nepal${r.recipient?': '+r.recipient:''}`:catMeta.label||r.category;
+    const amtSign= (r.type==='expense'||isRemit)?'− ':'+ ';
+    const amtClass=isTransfer?'transfer':isRemit?'remittance':r.type;
     const dateStr= new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const triggerClass = isRemit ? 'history-nepal-edit-trigger' : 'btn-edit-trigger';
     
     const card=document.createElement('div');
     card.className='entry-card';
     card.innerHTML=`
       <div class="entry-icon ${r.type}">${icon}</div>
-      <div class="entry-info btn-edit-trigger" data-id="${r.id}" title="Click to Edit">
+      <div class="entry-info ${triggerClass}" data-id="${r.id}" title="Click to Edit">
         <div class="entry-source">${r.source||label}</div>
         <div class="entry-meta">${label} · ${dateStr}${r.note?' · '+r.note:''}</div>
       </div>
@@ -509,6 +606,7 @@ function renderHistory() {
           el('form-type-switcher').style.opacity = '1';
           document.getElementById('txForm').reset();
         }
+        if (editingNepalId === id) resetNepalForm();
         records=records.filter(r=>r.id!==id);
         save(); renderHistory(); showToast('Entry deleted');
       }
@@ -519,6 +617,25 @@ function renderHistory() {
   list.querySelectorAll('.btn-edit-trigger').forEach(div => {
     div.addEventListener('click', () => startEdit(div.dataset.id));
   });
+  list.querySelectorAll('.history-nepal-edit-trigger').forEach(div => {
+    div.addEventListener('click', () => { switchTab('nepal'); startNepalEdit(div.dataset.id); });
+  });
+
+  if (shouldLimit) {
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'btn btn-ghost history-show-more';
+    moreBtn.textContent = `Show all ${filtered.length} entries`;
+    moreBtn.addEventListener('click', () => { historyShowAll = true; renderHistory(); });
+    list.appendChild(moreBtn);
+  } else if (historyShowAll && !hasActiveFilter && filtered.length > HISTORY_PREVIEW_LIMIT) {
+    const lessBtn = document.createElement('button');
+    lessBtn.type = 'button';
+    lessBtn.className = 'btn btn-ghost history-show-more';
+    lessBtn.textContent = 'Show less';
+    lessBtn.addEventListener('click', () => { historyShowAll = false; renderHistory(); });
+    list.appendChild(lessBtn);
+  }
 }
 
 function populateMonthFilter() {
@@ -531,6 +648,115 @@ function populateMonthFilter() {
     const lbl=new Date(+y,+mo-1,1).toLocaleString('en-US',{month:'long',year:'numeric'});
     sel.innerHTML+=`<option value="${m}"${m===cur?' selected':''}>${lbl}</option>`;
   });
+}
+
+// Nepal Remittance Tracker
+function renderNepal() {
+  const remits = records.filter(r => r.type === 'remittance');
+  const total = remits.reduce((s,r)=>s+r.amount,0);
+  const now = new Date();
+  const thisMonth = remits.filter(r => {
+    const d = new Date(r.date);
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  }).reduce((s,r)=>s+r.amount,0);
+
+  el('nepal-total').textContent = fmt(total);
+  el('nepal-month').textContent = fmt(thisMonth);
+  el('nepal-count').textContent = remits.length;
+
+  const list = el('nepalList');
+  list.innerHTML = '';
+  if (!remits.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🇳🇵</div><p>No transfers yet. Add one above.</p></div>`;
+    return;
+  }
+
+  remits.slice().sort((a,b)=> b.date.localeCompare(a.date)).forEach(r => {
+    const dateStr = new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const card = document.createElement('div');
+    card.className = 'entry-card';
+    card.innerHTML = `
+      <div class="entry-icon remittance">🇳🇵</div>
+      <div class="entry-info nepal-edit-trigger" data-id="${r.id}" title="Click to edit">
+        <div class="entry-source">${r.recipient ? 'To ' + r.recipient : 'Sent to Nepal'}</div>
+        <div class="entry-meta">${dateStr}${r.note ? ' · ' + r.note : ''}</div>
+      </div>
+      <div class="entry-right">
+        <span class="entry-amount remittance">− ${fmt(r.amount)}</span>
+        <span class="entry-account ${r.account}">${r.account}</span>
+        <button class="entry-del" data-id="${r.id}" title="Delete">✕</button>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('.entry-del').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Delete this Nepal transfer?')) {
+        const id = btn.dataset.id;
+        if (editingNepalId === id) resetNepalForm();
+        records = records.filter(r => r.id !== id);
+        save(); renderNepal(); showToast('Transfer deleted');
+      }
+    });
+  });
+
+  list.querySelectorAll('.nepal-edit-trigger').forEach(div => {
+    div.addEventListener('click', () => startNepalEdit(div.dataset.id));
+  });
+}
+
+function startNepalEdit(id) {
+  const r = records.find(rec => rec.id === id && rec.type === 'remittance');
+  if (!r) return;
+  editingNepalId = id;
+  el('nepal-form-title').textContent = 'Edit Nepal transfer';
+  el('nepal-submit-btn').textContent = 'Update transfer';
+  el('nepal-submit-btn').classList.add('amber');
+  el('np-amount').value = r.amount;
+  el('np-date').value = r.date;
+  el('np-account').value = r.account;
+  el('np-recipient').value = r.recipient || '';
+  el('np-note').value = r.note || '';
+  el('np-amount').focus();
+}
+
+function resetNepalForm() {
+  editingNepalId = null;
+  el('nepal-form-title').textContent = 'Send money to Nepal';
+  el('nepal-submit-btn').textContent = 'Save transfer';
+  el('nepal-submit-btn').classList.remove('amber');
+  el('nepalForm').reset();
+  el('np-date').value = today();
+}
+
+function handleNepalForm(e) {
+  e.preventDefault();
+  const amount    = parseAmount(el('np-amount').value.trim());
+  const date      = el('np-date').value;
+  const account   = el('np-account').value;
+  const recipient = el('np-recipient').value.trim();
+  const note      = el('np-note').value.trim();
+
+  if (isNaN(amount) || amount <= 0) { showToast('Enter a valid amount — e.g. 10,000 or 10k'); return; }
+  if (!date) return;
+
+  const fromBal = accountBalance(account, editingNepalId);
+  if (amount > fromBal) { showToast(`Not enough balance in ${account} (${fmt(fromBal)})`); return; }
+
+  if (editingNepalId) {
+    const idx = records.findIndex(r => r.id === editingNepalId);
+    if (idx !== -1) {
+      records[idx] = { id: editingNepalId, type: 'remittance', account, amount, date, recipient, note };
+      showToast('Transfer updated ✓');
+    }
+  } else {
+    records.unshift({ id: uid(), type: 'remittance', account, amount, date, recipient, note });
+    showToast('Sent to Nepal ✓');
+  }
+  save();
+  resetNepalForm();
+  renderNepal();
 }
 
 // Data Backup & Export Operations Manager
@@ -581,6 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.type-btn').forEach(b => b.addEventListener('click', ()=>setType(b.dataset.type)));
   document.querySelectorAll('.cat-tab').forEach(b  => b.addEventListener('click', ()=>renderCatSection(b.dataset.type)));
   document.querySelectorAll('.period-btn').forEach(b => b.addEventListener('click', ()=>setPeriod(b.dataset.period)));
+  el('btn-apply-range').addEventListener('click', applyCustomRange);
 
   el('txForm').addEventListener('submit', handleForm);
   el('btn-add-custom-cat').addEventListener('click', handleCustomCategory);
@@ -599,6 +826,18 @@ document.addEventListener('DOMContentLoaded', () => {
   el('filter-account').addEventListener('change', renderHistory);
   el('filter-month').addEventListener('change', renderHistory);
   el('search-history').addEventListener('input', renderHistory);
+  el('filter-date-from').addEventListener('change', renderHistory);
+  el('filter-date-to').addEventListener('change', renderHistory);
+  el('btn-clear-dates').addEventListener('click', ()=>{
+    el('filter-date-from').value='';
+    el('filter-date-to').value='';
+    renderHistory();
+  });
+
+  // Nepal remittance hooks
+  el('nepalForm').addEventListener('submit', handleNepalForm);
+  el('btn-nepal-reset').addEventListener('click', resetNepalForm);
+  el('np-date').value = today();
 
   // Backup System Hooks
   el('btn-export').addEventListener('click', exportData);

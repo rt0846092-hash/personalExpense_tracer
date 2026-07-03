@@ -10,6 +10,8 @@
   --amber-light: #fef3c7;
   --purple:      #7c3aed;
   --gray:        #6b7280;
+  --nepal:       #dc143c;
+  --nepal-light: #fef0f2;
   --text:           #111827;
   --text-secondary: #6b7280;
   --text-tertiary:  #9ca3af;
@@ -65,7 +67,7 @@ main { max-width: 900px; margin: 0 auto; padding: 1.75rem 1.5rem; width: 100%; }
   margin-bottom: 1.25rem; flex-wrap: wrap; gap: .5rem;
 }
 .period-bar-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-.period-btns { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; }
+.period-btns { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 3px; flex-wrap: wrap; }
 .period-btn {
   background: none; border: none; cursor: pointer;
   padding: 4px 11px; border-radius: 7px;
@@ -74,6 +76,16 @@ main { max-width: 900px; margin: 0 auto; padding: 1.75rem 1.5rem; width: 100%; }
   white-space: nowrap;
 }
 .period-btn.active { background: var(--blue); color: #fff; }
+
+/* Custom date range bar */
+.custom-range-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 14px; margin: -0.75rem 0 1.25rem;
+}
+.custom-range-bar input[type="date"] { width: auto; flex: 1; min-width: 130px; }
+.custom-range-bar .btn { flex-shrink: 0; }
+.range-sep { font-size: 13px; color: var(--text-tertiary); flex-shrink: 0; }
 
 /* Totals strip (all-time) */
 .totals-strip {
@@ -155,7 +167,7 @@ main { max-width: 900px; margin: 0 auto; padding: 1.75rem 1.5rem; width: 100%; }
 /* Form Layout Framework updates */
 .form-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 2rem; max-width: 540px;
+  border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 2rem; max-width: 540px; margin: 0 auto;
 }
 .form-title { font-size: 18px; font-weight: 600; margin-bottom: 1.5rem; }
 .type-switcher {
@@ -191,6 +203,7 @@ textarea { resize: vertical; min-height: 72px; }
 .btn-primary.green  { background: var(--green); }
 .btn-primary.red    { background: var(--red); }
 .btn-primary.amber  { background: var(--amber); }
+.btn-primary.nepal  { background: var(--nepal); }
 .btn-primary:hover  { opacity: .88; }
 .btn-ghost  { background: none; border: 1px solid var(--border-strong); color: var(--text); }
 .btn-ghost:hover { background: var(--bg); }
@@ -211,6 +224,9 @@ textarea { resize: vertical; min-height: 72px; }
 .search-bar-wrap input { width: 100%; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; }
 .filters select { flex: 1; min-width: 120px; }
+.filters-dates { align-items: center; }
+.filters-dates input[type="date"] { flex: 1; min-width: 130px; }
+.filters-dates .btn { flex-shrink: 0; }
 
 .history-list { display: flex; flex-direction: column; gap: 8px; }
 .entry-card {
@@ -224,6 +240,7 @@ textarea { resize: vertical; min-height: 72px; }
 .entry-icon.income   { background: var(--green-light); }
 .entry-icon.expense  { background: var(--red-light); }
 .entry-icon.transfer { background: var(--blue-light); }
+.entry-icon.remittance { background: var(--nepal-light); }
 
 .entry-info { flex: 1; min-width: 0; cursor: pointer; }
 .entry-info:hover .entry-source { color: var(--blue); text-decoration: underline; }
@@ -235,6 +252,7 @@ textarea { resize: vertical; min-height: 72px; }
 .entry-amount.income   { color: var(--green); }
 .entry-amount.expense  { color: var(--red); }
 .entry-amount.transfer { color: var(--blue); }
+.entry-amount.remittance { color: var(--nepal); }
 .entry-account { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
 .entry-account.digital { background: var(--blue-light); color: var(--blue); }
 .entry-account.cash    { background: var(--green-light); color: var(--green); }
@@ -244,6 +262,8 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .entry-del:hover { color: var(--red); background: var(--red-light); }
 
+.history-show-more { align-self: center; margin: 6px auto 0; }
+
 /* Backup/Restore Layout Elements */
 .backup-section {
   margin-top: 2rem; background: var(--surface); border: 1px dashed var(--border-strong);
@@ -252,6 +272,17 @@ textarea { resize: vertical; min-height: 72px; }
 .backup-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: .75rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .backup-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 #btn-import-label { cursor: pointer; display: inline-flex; }
+
+/* Nepal remittance tracker */
+.nepal-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.nepal-summary-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  padding: 1rem 1.25rem; border-top: 3px solid var(--nepal);
+}
+.nepal-summary-label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; }
+.nepal-summary-value { font-size: 20px; font-weight: 700; color: var(--text); }
+.nepal-form-card { max-width: 100%; margin-bottom: 1.25rem; }
 
 .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-tertiary); }
 .empty-state .empty-icon { font-size: 36px; margin-bottom: .5rem; }
@@ -288,6 +319,8 @@ textarea { resize: vertical; min-height: 72px; }
   .filters select { width: 100%; min-width: 0; }
   .nav-btn { padding: 6px 10px; font-size: 13.5px; }
   .chart-section, .cat-section { padding: 1.25rem; }
+  .nepal-summary { grid-template-columns: repeat(2, 1fr); gap: .85rem; }
+  .nepal-summary-card:nth-child(3) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 480px) {
@@ -300,6 +333,10 @@ textarea { resize: vertical; min-height: 72px; }
   .period-bar { flex-direction: column; align-items: flex-start; gap: .6rem; }
   .period-btns { width: 100%; overflow-x: auto; }
   .period-btn { padding: 4px 9px; font-size: 12.5px; }
+  .custom-range-bar { flex-direction: column; align-items: stretch; margin-top: -0.35rem; }
+  .custom-range-bar input[type="date"] { width: 100%; }
+  .custom-range-bar .btn { width: 100%; }
+  .range-sep { text-align: center; }
   .totals-strip { padding: .9rem 1rem; }
   .totals-inner { gap: .75rem; }
   .total-item-val { font-size: 15px; }
@@ -327,4 +364,10 @@ textarea { resize: vertical; min-height: 72px; }
   .entry-source { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .entry-meta { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .entry-right { flex-basis: 100%; justify-content: space-between; margin-top: 2px; }
+  .filters-dates { flex-direction: column; align-items: stretch; }
+  .filters-dates input[type="date"] { width: 100%; }
+  .filters-dates .btn { width: 100%; }
+  .nepal-summary { grid-template-columns: 1fr; gap: .65rem; }
+  .nepal-summary-card:nth-child(3) { grid-column: auto; }
+  .nepal-summary-value { font-size: 18px; }
 }
