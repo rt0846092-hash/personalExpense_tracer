@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Income & Expense Tracker</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .suffix-btn-row { display:flex; gap:6px; margin-top:6px; }
+  .suffix-btn {
+    flex:1; padding:6px 0; font-size:13px; font-weight:600;
+    border:1px solid var(--border, #d1d5db); border-radius:6px;
+    background:var(--bg-secondary, #f3f4f6); color:var(--text-secondary, #4b5563);
+    cursor:pointer;
+  }
+  .suffix-btn:active { background:var(--accent, #2563eb); color:#fff; }
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -139,6 +149,11 @@
             <div class="field">
               <label for="f-amount">Amount (Nrs)</label>
               <input id="f-amount" type="text" inputmode="numeric" placeholder="e.g. 5000, 10k, 1.5K" required>
+              <div class="suffix-btn-row">
+                <button type="button" class="suffix-btn" data-target="f-amount" data-suffix="k">K</button>
+                <button type="button" class="suffix-btn" data-target="f-amount" data-suffix="l">L</button>
+                <button type="button" class="suffix-btn" data-target="f-amount" data-suffix="m">M</button>
+              </div>
               <div class="input-hint">Supports: 5000 · 5,000 · 10k · 10K · 1.5k</div>
             </div>
             <div class="field">
@@ -251,16 +266,32 @@
         <form id="nepalForm" novalidate>
           <div class="field-row">
             <div class="field">
-              <label for="np-amount">Amount (Nrs)</label>
+              <label for="np-krw">Sent from Korea (Nrs) </label>
+              <input id="np-krw" type="text" inputmode="numeric" placeholder="e.g. 500000, 500k">
+              <div class="suffix-btn-row">
+                <button type="button" class="suffix-btn" data-target="np-krw" data-suffix="k">K</button>
+                <button type="button" class="suffix-btn" data-target="np-krw" data-suffix="m">M</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="np-amount">Received in Nepal (Nrs)</label>
               <input id="np-amount" type="text" inputmode="numeric" placeholder="e.g. 10000, 10k" required>
+              <div class="suffix-btn-row">
+                <button type="button" class="suffix-btn" data-target="np-amount" data-suffix="k">K</button>
+                <button type="button" class="suffix-btn" data-target="np-amount" data-suffix="l">L</button>
+                <button type="button" class="suffix-btn" data-target="np-amount" data-suffix="m">M</button>
+              </div>
               <div class="input-hint">Supports: 10000 · 10,000 · 10k · 1.5k</div>
             </div>
+          </div>
+          <div class="field" id="np-rate-display" style="display:none">
+            <div class="input-hint" id="np-rate-text"></div>
+          </div>
+          <div class="field-row">
             <div class="field">
               <label for="np-date">Date</label>
               <input id="np-date" type="date" required>
             </div>
-          </div>
-          <div class="field-row">
             <div class="field">
               <label for="np-account">From account</label>
               <select id="np-account">
@@ -268,10 +299,10 @@
                 <option value="cash">💵 Cash</option>
               </select>
             </div>
-            <div class="field">
-              <label for="np-recipient">Recipient <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
-              <input id="np-recipient" type="text" placeholder="e.g. Mother, Father">
-            </div>
+          </div>
+          <div class="field">
+            <label for="np-recipient">Recipient <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
+            <input id="np-recipient" type="text" placeholder="e.g. Mother, Father">
           </div>
           <div class="field">
             <label for="np-note">Note <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>

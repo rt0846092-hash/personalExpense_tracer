@@ -54,20 +54,37 @@ function fmt(n) {
   return CURRENCY + ' ' + Math.abs(n).toLocaleString('en-US');
 }
 
+function fmtKRW(n) {
+  return '₩' + Math.abs(n).toLocaleString('en-US');
+}
+
 function parseAmount(raw) {
   if (!raw) return NaN;
   const s = raw.toString().trim().replace(/,/g, '');
-  const match = s.match(/^([\d.]+)\s*([kK]?)$/);
+  const match = s.match(/^([\d.]+)\s*([kKlLmM]?)$/);
   if (!match) return NaN;
   const num = parseFloat(match[1]);
   if (isNaN(num)) return NaN;
-  return match[2] ? Math.round(num * 1000) : Math.round(num);
+  const suffix = match[2].toLowerCase();
+  if (suffix === 'k') return Math.round(num * 1000);
+  if (suffix === 'l') return Math.round(num * 100000);
+  if (suffix === 'm') return Math.round(num * 1000000);
+  return Math.round(num);
 }
 
 function uid()   { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 function mk(iso) { return iso.slice(0, 7); }
 function today() { return new Date().toISOString().slice(0, 10); }
 function el(id)  { return document.getElementById(id); }
+
+function appendSuffix(inputId, suffix) {
+  const field = el(inputId);
+  const digitsOnly = field.value.trim().replace(/[kKlLmM]$/, '');
+  if (!digitsOnly) { field.focus(); return; }
+  field.value = digitsOnly + suffix;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.focus();
+}
 
 // Time Computations
 function periodRange(period) {
@@ -222,7 +239,8 @@ function renderDashboard() {
 
   const allInc = records.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
   const allExp = records.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
-  const allNet = allInc - allExp;
+  const allRemit = records.filter(r=>r.type==='remittance').reduce((s,r)=>s+r.amount,0);
+  const allNet = allInc - allExp - allRemit;
   el('total-income').textContent  = fmt(allInc);
   el('total-expense').textContent = fmt(allExp);
   el('total-net').textContent     = (allNet>=0?'+':'−') + ' ' + fmt(allNet);
@@ -231,7 +249,8 @@ function renderDashboard() {
   const pRecs  = records.filter(r => inPeriod(r.date, chartPeriod));
   const pInc   = pRecs.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
   const pExp   = pRecs.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
-  const pNet   = pInc - pExp;
+  const pRemit = pRecs.filter(r=>r.type==='remittance').reduce((s,r)=>s+r.amount,0);
+  const pNet   = pInc - pExp - pRemit;
   el('stat-income').textContent  = fmt(pInc);
   el('stat-expense').textContent = fmt(pExp);
   el('stat-net').textContent     = (pNet>=0?'+':'−') + ' ' + fmt(pNet);
@@ -693,13 +712,15 @@ function renderNepal() {
 
   remits.slice().sort((a,b)=> b.date.localeCompare(a.date)).forEach(r => {
     const dateStr = new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const krwLine = r.krw ? `${fmtKRW(r.krw)} sent · ` : '';
+    const rateLine = r.krw ? ` · rate ₩${(r.krw/r.amount).toLocaleString('en-US',{maximumFractionDigits:2})}=Nrs1` : '';
     const card = document.createElement('div');
     card.className = 'entry-card';
     card.innerHTML = `
       <div class="entry-icon remittance">🇳🇵</div>
       <div class="entry-info nepal-edit-trigger" data-id="${r.id}" title="Click to edit">
         <div class="entry-source">${r.recipient ? 'To ' + r.recipient : 'Sent to Nepal'}</div>
-        <div class="entry-meta">${dateStr}${r.note ? ' · ' + r.note : ''}</div>
+        <div class="entry-meta">${krwLine}${dateStr}${rateLine}${r.note ? ' · ' + r.note : ''}</div>
       </div>
       <div class="entry-right">
         <span class="entry-amount remittance">− ${fmt(r.amount)}</span>
@@ -734,11 +755,27 @@ function startNepalEdit(id) {
   el('nepal-submit-btn').textContent = 'Update transfer';
   el('nepal-submit-btn').classList.add('amber');
   el('np-amount').value = r.amount;
+  el('np-krw').value = r.krw || '';
   el('np-date').value = r.date;
   el('np-account').value = r.account;
   el('np-recipient').value = r.recipient || '';
   el('np-note').value = r.note || '';
+  updateNepalRateDisplay();
   el('np-amount').focus();
+}
+
+function updateNepalRateDisplay() {
+  const krw = parseAmount(el('np-krw').value.trim());
+  const nrs = parseAmount(el('np-amount').value.trim());
+  const box = el('np-rate-display');
+  const txt = el('np-rate-text');
+  if (!isNaN(krw) && krw > 0 && !isNaN(nrs) && nrs > 0) {
+    const rate = krw / nrs;
+    txt.textContent = `Rate: ₩${rate.toLocaleString('en-US',{maximumFractionDigits:2})} = Nrs 1  ·  ₩1,000 ≈ Nrs ${(1000/rate).toLocaleString('en-US',{maximumFractionDigits:2})}`;
+    box.style.display = '';
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 function resetNepalForm() {
@@ -748,17 +785,21 @@ function resetNepalForm() {
   el('nepal-submit-btn').classList.remove('amber');
   el('nepalForm').reset();
   el('np-date').value = today();
+  el('np-rate-display').style.display = 'none';
 }
 
 function handleNepalForm(e) {
   e.preventDefault();
   const amount    = parseAmount(el('np-amount').value.trim());
+  const krwRaw    = el('np-krw').value.trim();
+  const krw       = krwRaw ? parseAmount(krwRaw) : null;
   const date      = el('np-date').value;
   const account   = el('np-account').value;
   const recipient = el('np-recipient').value.trim();
   const note      = el('np-note').value.trim();
 
   if (isNaN(amount) || amount <= 0) { showToast('Enter a valid amount — e.g. 10,000 or 10k'); return; }
+  if (krwRaw && (isNaN(krw) || krw <= 0)) { showToast('Enter a valid KRW amount — e.g. 500,000 or 500k'); return; }
   if (!date) return;
 
   const fromBal = accountBalance(account, editingNepalId);
@@ -767,11 +808,11 @@ function handleNepalForm(e) {
   if (editingNepalId) {
     const idx = records.findIndex(r => r.id === editingNepalId);
     if (idx !== -1) {
-      records[idx] = { id: editingNepalId, type: 'remittance', account, amount, date, recipient, note };
+      records[idx] = { id: editingNepalId, type: 'remittance', account, amount, krw, date, recipient, note };
       showToast('Transfer updated ✓');
     }
   } else {
-    records.unshift({ id: uid(), type: 'remittance', account, amount, date, recipient, note });
+    records.unshift({ id: uid(), type: 'remittance', account, amount, krw, date, recipient, note });
     showToast('Sent to Nepal ✓');
   }
   save();
@@ -836,6 +877,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   el('txForm').addEventListener('submit', handleForm);
   el('btn-add-custom-cat').addEventListener('click', handleCustomCategory);
+
+  // Suffix quick-buttons for mobile numeric keypads (can't type k/l/m directly)
+  document.querySelectorAll('.suffix-btn').forEach(b => {
+    b.addEventListener('click', () => appendSuffix(b.dataset.target, b.dataset.suffix));
+  });
   
   el('btn-reset').addEventListener('click', ()=>{ 
     editingRecordId = null;
@@ -862,6 +908,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Nepal remittance hooks
   el('nepalForm').addEventListener('submit', handleNepalForm);
   el('btn-nepal-reset').addEventListener('click', resetNepalForm);
+  el('np-krw').addEventListener('input', updateNepalRateDisplay);
+  el('np-amount').addEventListener('input', updateNepalRateDisplay);
   el('np-date').value = today();
 
   // Backup System Hooks
