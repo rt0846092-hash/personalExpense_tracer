@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Stops a single wide element (a long note, a table) from making the
+     whole page scroll sideways on a phone — the most common mobile bug. */
+  html, body {
+    overflow-x: hidden;
+  }
+}
+
 @layer utilities {
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
@@ -14,6 +22,16 @@
   .input:focus {
     @apply border-blue ring-4;
     --tw-ring-color: rgba(37,99,235,.1);
+  }
+}
+
+/* iOS zooms the page in when you focus a field whose text is under 16px.
+   Declared outside @layer so it reliably beats .input's own text-sm, and
+   scoped to .input rather than every input/select — the compact currency
+   picker in the navbar would blow out the header width at 16px. */
+@media (max-width: 640px) {
+  .input {
+    font-size: 16px;
   }
 }
 

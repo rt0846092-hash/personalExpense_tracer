@@ -213,7 +213,7 @@ export default function History({ onEdit }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-5 flex flex-col gap-3">
+      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-4 sm:p-5 flex flex-col gap-3">
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search by description, note, amount, account, country…" className="input" />
         <div className="flex gap-2.5 flex-wrap">
@@ -293,8 +293,21 @@ export default function History({ onEdit }) {
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <span className={`text-[15px] font-bold ${amtClass}`}>{sign}{money(inDisplay(r))}</span>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${r.account === 'digital' ? 'bg-blue-light text-blue' : 'bg-green-light text-green'}`}>{r.account}</span>
-                  <button onClick={() => handleDelete(r.id)} title="Delete" className="text-gray-400 hover:text-red hover:bg-red-light px-1.5 py-1 rounded-md">✕</button>
+                  {/* Account is secondary detail — on a narrow phone it
+                      competes with the entry description for space, so it
+                      only shows once the row can afford it. */}
+                  <span className={`hidden sm:inline text-[11px] px-2 py-0.5 rounded-full font-medium ${r.account === 'digital' ? 'bg-blue-light text-blue' : 'bg-green-light text-green'}`}>{r.account}</span>
+                  {/* Destructive action — needs a target big enough to hit
+                      deliberately, and not so tight against the edit area
+                      that it gets tapped by accident. */}
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    title="Delete"
+                    aria-label="Delete entry"
+                    className="w-8 h-8 grid place-items-center shrink-0 text-gray-400 hover:text-red hover:bg-red-light active:bg-red-light rounded-md transition-colors"
+                  >
+                    ✕
+                  </button>
                 </div>
                 {showsOriginal && (
                   <span className="text-[10px] text-gray-400">orig. {fmtIn(r.amount, r.currency)}</span>

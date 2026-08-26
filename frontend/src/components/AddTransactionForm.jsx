@@ -131,7 +131,7 @@ export default function AddTransactionForm({ editingRecord, onDone }) {
   const customList = customCats.filter(c => c.type === form.type)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-6 md:p-8 max-w-[540px] mx-auto">
+    <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-4 sm:p-6 md:p-8 max-w-[540px] mx-auto">
       <div className="text-lg font-semibold mb-6">{editingRecord ? 'Edit transaction' : 'Add transaction'}</div>
 
       <div className={`flex border border-gray-300 rounded-card overflow-hidden mb-6 ${editingRecord ? 'pointer-events-none opacity-60' : ''}`}>
@@ -274,16 +274,19 @@ export default function AddTransactionForm({ editingRecord, onDone }) {
             placeholder="Any extra detail…" className="input min-h-[72px] resize-y" />
         </Field>
 
-        <div className="flex gap-2.5 pt-1">
+        {/* On a phone the primary action should be a full-width, easily
+            thumbed target — and Clear should read as clearly secondary so
+            it isn't fired by accident next to it. */}
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-1">
+          <button type="button" onClick={handleReset} className="px-5 py-3 sm:py-2.5 rounded-card text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 active:bg-gray-100">
+            Clear
+          </button>
           <button type="submit"
-            className={`px-5 py-2.5 rounded-card text-sm font-medium text-white ${
+            className={`flex-1 sm:flex-none px-5 py-3 sm:py-2.5 rounded-card text-sm font-medium text-white transition-opacity active:opacity-80 ${
               editingRecord ? 'bg-amber' : form.type === 'income' ? 'bg-green' : form.type === 'expense' ? 'bg-red' : 'bg-blue'
             }`}
           >
             {editingRecord ? 'Update entry' : form.type === 'income' ? 'Save income' : form.type === 'expense' ? 'Save expense' : 'Save transfer'}
-          </button>
-          <button type="button" onClick={handleReset} className="px-5 py-2.5 rounded-card text-sm font-medium border border-gray-300 hover:bg-gray-50">
-            Clear
           </button>
         </div>
       </form>

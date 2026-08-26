@@ -42,6 +42,19 @@ export const CURRENCIES = [
 
 export const CURRENCY_SYMBOLS = Object.fromEntries(CURRENCIES.map(c => [c.code, c.symbol]))
 
+// Compact single-character glyphs for the small logo square. The full
+// symbols above are better for amounts ("Nrs 1,200" reads clearly), but
+// they're too wide for a 28px badge — these are the tight equivalents.
+export const CURRENCY_GLYPHS = {
+  NPR: '₨', USD: '$', KRW: '₩', INR: '₹', EUR: '€', GBP: '£',
+  AED: 'د.إ', SAR: '﷼', QAR: 'ر.ق', MYR: 'RM', SGD: 'S$',
+  AUD: 'A$', CAD: 'C$', JPY: '¥', CNY: '¥', THB: '฿',
+}
+
+// Surfaced at the top of the currency picker — the ones actually used
+// day to day, so they aren't buried in a list of sixteen.
+export const FREQUENT_CURRENCIES = ['NPR', 'USD', 'KRW']
+
 // The free, no-key exchange-rate API used for live conversion. Returns
 // rates for ~160 currencies relative to a base (we always fetch USD as
 // the pivot, then convert between any two currencies via that).

@@ -11,7 +11,7 @@ import {
 export default function Dashboard({ onSeeRemittance }) {
   const { records, customCats, openingBalances } = useTracker()
   const { displayCurrency, rates, ratesError, loading: ratesLoading } = useCurrency()
-  const [period, setPeriod] = useState('1m')
+  const [period, setPeriod] = useState('6m')
   const [customRange, setCustomRange] = useState({ from: '', to: '' })
   const [showCustomBar, setShowCustomBar] = useState(false)
   const [catType, setCatType] = useState('income')
@@ -87,14 +87,14 @@ export default function Dashboard({ onSeeRemittance }) {
             <button
               key={p.key}
               onClick={() => { setPeriod(p.key); setShowCustomBar(false) }}
-              className={`px-3 py-1 rounded-lg text-xs font-medium ${period === p.key ? 'bg-blue text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`px-3 py-2 sm:py-1 rounded-lg text-xs font-medium transition-colors ${period === p.key ? 'bg-blue text-white' : 'text-gray-500 hover:bg-gray-50 active:bg-gray-100'}`}
             >
               {p.label}
             </button>
           ))}
           <button
             onClick={() => setShowCustomBar(s => !s)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium ${period === 'custom' ? 'bg-blue text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            className={`px-3 py-2 sm:py-1 rounded-lg text-xs font-medium transition-colors ${period === 'custom' ? 'bg-blue text-white' : 'text-gray-500 hover:bg-gray-50 active:bg-gray-100'}`}
           >
             Custom
           </button>
@@ -118,11 +118,13 @@ export default function Dashboard({ onSeeRemittance }) {
       )}
 
       {/* Totals strip */}
-      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
           All-time total {ratesLoading && <span className="normal-case font-normal">(loading rates…)</span>}
         </span>
-        <div className="flex gap-8 flex-wrap">
+        {/* Four items in a wrapping flex row broke into ragged lines on a
+            phone — a 2×2 grid keeps them aligned and predictable. */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:gap-8">
           <TotalItem label="Income" value={money(allInc)} className="text-green" />
           <TotalItem label="Expense" value={money(allExp)} className="text-red" />
           <TotalItem label="Net" value={`${allNet >= 0 ? '+' : '−'} ${money(allNet)}`} className={allNet < 0 ? 'text-red' : 'text-gray-900'} />
@@ -144,7 +146,7 @@ export default function Dashboard({ onSeeRemittance }) {
       </div>
 
       {/* Chart */}
-      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-5">
+      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-4 sm:p-5">
         <div className="text-sm font-semibold mb-3">{periodLabel}</div>
         <div className="flex gap-4 mb-2 text-xs text-gray-500">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-mid inline-block" /> Income</span>
@@ -161,7 +163,7 @@ export default function Dashboard({ onSeeRemittance }) {
       </div>
 
       {/* Category breakdown */}
-      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-5">
+      <div className="bg-white border border-gray-200 rounded-cardLg shadow-card p-4 sm:p-5">
         <div className="flex gap-1.5 mb-4 flex-wrap">
           {['income', 'expense'].map(t => (
             <button
@@ -183,19 +185,22 @@ export default function Dashboard({ onSeeRemittance }) {
               return (
                 <div key={cat} className="flex items-center gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: meta.color }} />
-                  <span className="text-sm flex-1">{meta.label}</span>
-                  <div className="flex-[2] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <span className="text-sm flex-1 truncate">{meta.label}</span>
+                  {/* The bar is decoration; on a narrow phone it steals the
+                      room the label actually needs, so it only appears
+                      once there's space for it. */}
+                  <div className="hidden sm:block flex-[2] h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: meta.color }} />
                   </div>
-                  <span className="text-sm font-medium min-w-[90px] text-right">{money(val)}</span>
+                  <span className="text-sm font-medium text-right whitespace-nowrap shrink-0">{money(val)}</span>
                 </div>
               )
             })}
             <div className="flex items-center gap-2.5 pt-2.5 mt-1 border-t border-gray-200 font-bold">
               <div className="w-2.5 h-2.5" />
               <span className="text-sm flex-1">Total</span>
-              <div className="flex-[2]" />
-              <span className="text-sm min-w-[90px] text-right">{money(grandTotal)}</span>
+              <div className="hidden sm:block flex-[2]" />
+              <span className="text-sm text-right whitespace-nowrap shrink-0">{money(grandTotal)}</span>
             </div>
           </div>
         )}
@@ -248,7 +253,7 @@ function StripCard({ label, value, className }) {
 
 function AccountCard({ label, balance, stats, accentClass, money }) {
   return (
-    <div className={`bg-white border border-gray-200 border-t-4 ${accentClass} rounded-cardLg shadow-card px-6 py-5`}>
+    <div className={`bg-white border border-gray-200 border-t-4 ${accentClass} rounded-cardLg shadow-card px-4 sm:px-6 py-5`}>
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">{label}</div>
       <div className={`text-[26px] font-bold tracking-tight ${balance < 0 ? 'text-red' : 'text-gray-900'}`}>{money(balance)}</div>
       <div className="flex gap-3.5 mt-2.5 flex-wrap text-xs text-gray-500">
