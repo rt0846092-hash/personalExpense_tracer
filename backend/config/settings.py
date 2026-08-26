@@ -78,9 +78,12 @@ DATABASES = {
     'default': dj_database_url.parse(
         config('DATABASE_URL', default='mysql://tracker_user:tracker_pass@localhost:3306/tracker'),
         conn_max_age=600,
-        # Hosted MySQL (Aiven, etc.) requires TLS; local docker-compose
-        # doesn't have a cert, so only enforce this when actually deployed.
-        ssl_require=config('DB_SSL_REQUIRED', default=False, cast=bool),
+        # NOTE: deliberately not using dj_database_url's ssl_require=
+        # here — it injects a Postgres-style 'sslmode' OPTIONS key
+        # regardless of engine, which crashes PyMySQL with
+        # "unexpected keyword argument 'sslmode'". SSL for MySQL is
+        # handled explicitly below instead, with the key PyMySQL
+        # actually understands.
     )
 }
 
@@ -90,6 +93,17 @@ DATABASES = {
 if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
     DATABASES['default'].setdefault('OPTIONS', {})
     DATABASES['default']['OPTIONS']['charset'] = 'utf8mb4'
+
+    # Hosted MySQL (Aiven, etc.) requires TLS. PyMySQL takes this as an
+    # 'ssl' dict — an empty dict is enough to request an encrypted
+    # connection (verified against PyMySQL's source: no 'ca' key means it
+    # skips certificate-chain verification but still encrypts traffic).
+    # Don't paste the '?ssl-mode=REQUIRED' query param some providers show
+    # in their connection URI straight into DATABASE_URL — PyMySQL doesn't
+    # recognise that key and it would crash the connection. Strip it from
+    # the URL and set DB_SSL_REQUIRED=True instead.
+    if config('DB_SSL_REQUIRED', default=False, cast=bool):
+        DATABASES['default']['OPTIONS']['ssl'] = {}
 
 AUTHENTICATION_BACKENDS = [
     # Lets people sign in with either their username or their email —
