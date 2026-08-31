@@ -46,13 +46,29 @@ export default function Navbar({ tab, setTab }) {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-[900px] mx-auto px-4 md:px-6 h-14 flex items-center gap-3">
 
-        {/* Brand */}
-        <div className="flex items-center gap-2 font-semibold text-gray-900 shrink-0">
+        {/* Brand — tapping it returns to the dashboard, the usual
+            "logo goes home" convention. */}
+        <button
+          onClick={() => go('dashboard')}
+          className="flex items-center gap-2 font-semibold text-gray-900 shrink-0"
+          aria-label="Go to dashboard"
+        >
           <div className={`w-7 h-7 rounded-lg bg-blue text-white grid place-items-center font-bold ${glyphSize}`}>
             {glyph}
           </div>
           <span className="hidden sm:inline">Tracker</span>
-        </div>
+        </button>
+
+        {/* Mobile-only Dashboard shortcut so the main screen is always one
+            tap away without opening the menu. */}
+        <button
+          onClick={() => go('dashboard')}
+          className={`sm:hidden px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'dashboard' ? 'bg-blue-light text-blue' : 'text-gray-500 active:bg-gray-100'
+          }`}
+        >
+          Dashboard
+        </button>
 
         {/* Tabs — desktop only. Below sm they live in the menu. */}
         <nav className="hidden sm:flex gap-1 flex-1 justify-center">
@@ -126,7 +142,9 @@ export default function Navbar({ tab, setTab }) {
                   <div className="text-sm font-medium text-gray-900 truncate">{user?.username}</div>
                 </div>
                 <nav className="py-1">
-                  {TABS.map(t => (
+                  {/* Dashboard is excluded here — it has its own dedicated
+                      button in the top bar, so listing it twice is noise. */}
+                  {TABS.filter(t => t.key !== 'dashboard').map(t => (
                     <button
                       key={t.key}
                       onClick={() => go(t.key)}

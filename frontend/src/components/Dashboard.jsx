@@ -11,7 +11,7 @@ import {
 export default function Dashboard({ onSeeRemittance }) {
   const { records, customCats, openingBalances } = useTracker()
   const { displayCurrency, rates, ratesError, loading: ratesLoading } = useCurrency()
-  const [period, setPeriod] = useState('1m')
+  const [period, setPeriod] = useState('6m')
   const [customRange, setCustomRange] = useState({ from: '', to: '' })
   const [showCustomBar, setShowCustomBar] = useState(false)
   const [catType, setCatType] = useState('income')
@@ -180,12 +180,15 @@ export default function Dashboard({ onSeeRemittance }) {
         ) : (
           <div className="space-y-2.5">
             {sorted.map(([cat, val]) => {
-              const meta = cats[cat] || { label: cat, color: '#6b7280' }
+              const meta = cats[cat] || { label: cat || 'Uncategorized', color: '#9ca3af' }
+              // A record saved with an empty category key would otherwise
+              // render a nameless row — give it a readable fallback.
+              const label = meta.label || 'Uncategorized'
               const pct = ((val / grand) * 100).toFixed(0)
               return (
                 <div key={cat} className="flex items-center gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: meta.color }} />
-                  <span className="text-sm flex-1 truncate">{meta.label}</span>
+                  <span className="text-sm flex-1 truncate">{label}</span>
                   {/* The bar is decoration; on a narrow phone it steals the
                       room the label actually needs, so it only appears
                       once there's space for it. */}
