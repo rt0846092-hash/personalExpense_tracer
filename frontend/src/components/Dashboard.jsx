@@ -11,7 +11,7 @@ import {
 export default function Dashboard({ onSeeRemittance }) {
   const { records, customCats, openingBalances } = useTracker()
   const { displayCurrency, rates, ratesError, loading: ratesLoading } = useCurrency()
-  const [period, setPeriod] = useState('6m')
+  const [period, setPeriod] = useState('1m')
   const [customRange, setCustomRange] = useState({ from: '', to: '' })
   const [showCustomBar, setShowCustomBar] = useState(false)
   const [catType, setCatType] = useState('income')
