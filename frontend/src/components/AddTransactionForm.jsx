@@ -65,11 +65,22 @@ export default function AddTransactionForm({ editingRecord, onDone }) {
       showToast('From and To accounts must be different'); return
     }
 
+    // Guarantee a category rather than trusting the select to have been
+    // populated in time. Without this, an expense submitted before the
+    // auto-select effect fired could save with an empty category and then
+    // show up as a nameless "Uncategorized" row on the dashboard.
+    let category
+    if (form.type === 'transfer') {
+      category = 'transfer'
+    } else {
+      category = form.category || Object.keys(cats)[0] || 'other'
+    }
+
     const payload = {
       type: form.type,
       account: form.account,
       to_account: form.type === 'transfer' ? form.to_account : null,
-      category: form.type === 'transfer' ? 'transfer' : form.category,
+      category,
       amount,
       currency: form.currency,
       date: form.date,
