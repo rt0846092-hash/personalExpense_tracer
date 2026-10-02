@@ -1,4 +1,7 @@
+import datetime
+
 from rest_framework import viewsets, filters
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,6 +10,14 @@ from .models import Record, Category, OpeningBalance, UserPreference
 from .serializers import (
     RecordSerializer, CategorySerializer, OpeningBalanceSerializer, UserPreferenceSerializer,
 )
+
+
+def _parse_date(value, name):
+    """Turn a YYYY-MM-DD query parameter into a date, or explain what's wrong."""
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        raise ValidationError({name: 'Use a real date in the format YYYY-MM-DD.'})
 
 
 class RecordViewSet(viewsets.ModelViewSet):
@@ -25,12 +36,15 @@ class RecordViewSet(viewsets.ModelViewSet):
         account_any = params.get('account_any')  # matches account OR to_account
 
         if date_from:
-            qs = qs.filter(date__gte=date_from)
+            qs = qs.filter(date__gte=_parse_date(date_from, 'date_from'))
         if date_to:
-            qs = qs.filter(date__lte=date_to)
+            qs = qs.filter(date__lte=_parse_date(date_to, 'date_to'))
         if month:
-            year, mo = month.split('-')
-            qs = qs.filter(date__year=year, date__month=mo)
+            try:
+                first = datetime.datetime.strptime(month, '%Y-%m').date()
+            except ValueError:
+                raise ValidationError({'month': 'Use the format YYYY-MM, for example 2026-10.'})
+            qs = qs.filter(date__year=first.year, date__month=first.month)
         if account_any:
             from django.db.models import Q
             qs = qs.filter(Q(account=account_any) | Q(to_account=account_any))

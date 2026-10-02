@@ -1,8 +1,8 @@
-# Income & Expense Tracker — Full Stack (React + Tailwind + Django REST + PostgreSQL)
+# Income & Expense Tracker — Full Stack (React + Tailwind + Django REST + MySQL)
 
 Multi-user, multi-currency income/expense/transfer tracker with a
 multi-country remittance tracker, backed by Django REST Framework +
-PostgreSQL and a React + Tailwind frontend.
+MySQL and a React + Tailwind frontend.
 
 ```
 tracker-fullstack/
@@ -50,10 +50,10 @@ tracker-fullstack/
   display currency — the received amount is a separate figure used only to
   compute the fee/spread shown per transfer.
 
-## 1. Backend setup (Django + PostgreSQL)
+## 1. Backend setup (Django + MySQL)
 
 ```bash
-docker compose up -d db          # spins up Postgres with the default creds below
+docker compose up -d db          # starts MySQL 8.4 with the default credentials below
 
 cd backend
 python3 -m venv venv && source venv/bin/activate
@@ -102,9 +102,13 @@ Open `http://localhost:5173`, create an account, and go. Make sure
 - The exchange-rate API is free/keyless but best-effort — if it's
   unreachable the app shows a small warning banner and falls back to
   displaying amounts unconverted rather than guessing a rate.
-- Bulk JSON import isn't wired up in this REST version (export still
-  works) — say the word if you want a `/api/import/` endpoint added back.
-- Everything above was verified end-to-end in this pass: `npm run build`
-  succeeds, Django's `check`/`migrate` pass cleanly, and a scripted smoke
-  test confirmed registration, login, per-user data isolation, and
-  currency/remittance fields all round-trip correctly through the API.
+- History can import records from CSV; bulk JSON import isn't supported yet.
+
+## Tests
+
+```bash
+cd backend
+python manage.py test
+```
+
+14 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, and login is rate-limited (10 attempts a minute) to stop password guessing.

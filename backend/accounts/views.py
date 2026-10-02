@@ -2,8 +2,14 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import RegisterSerializer, UserSerializer
+
+
+class ThrottledLoginView(TokenObtainPairView):
+    """Login, limited to a few attempts per minute to stop password guessing."""
+    throttle_scope = 'auth'
 
 
 class RegisterView(generics.CreateAPIView):
@@ -11,6 +17,7 @@ class RegisterView(generics.CreateAPIView):
     the person lands signed in, no separate login step required."""
     permission_classes = [permissions.AllowAny]
     serializer_class = RegisterSerializer
+    throttle_scope = 'auth'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
