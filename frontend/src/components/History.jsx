@@ -264,16 +264,19 @@ export default function History({ onEdit }) {
         ) : visible.map(r => {
           const isTransfer = r.type === 'transfer'
           const isRemit = r.type === 'remittance'
+          const isLoan = r.type === 'loan_in' || r.type === 'loan_out'
           const cats = r.type === 'income' ? incomeCats : r.type === 'expense' ? expenseCats : {}
           const catMeta = cats[r.category] || {}
-          const icon = isTransfer ? '↔' : isRemit ? '🌍' : catMeta.icon || '•'
-          const label = isTransfer
+          const icon = isLoan ? '🤝' : isTransfer ? '↔' : isRemit ? '🌍' : catMeta.icon || '•'
+          const label = isLoan
+            ? 'Borrow / Lend'
+            : isTransfer
             ? `Transfer: ${r.account} → ${r.to_account}`
             : isRemit
               ? `${r.from_country || '?'} → ${r.to_country || '?'}${r.recipient ? ' · ' + r.recipient : ''}`
               : catMeta.label || r.category
-          const sign = (r.type === 'expense' || isRemit) ? '− ' : '+ '
-          const amtClass = isTransfer ? 'text-blue' : isRemit ? 'text-nepal' : r.type === 'income' ? 'text-green' : 'text-red'
+          const sign = (r.type === 'expense' || isRemit || r.type === 'loan_out') ? '− ' : '+ '
+          const amtClass = isLoan ? 'text-gray-700' : isTransfer ? 'text-blue' : isRemit ? 'text-nepal' : r.type === 'income' ? 'text-green' : 'text-red'
           const dateStr = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           const entryLabel = r.source || label
           const showsOriginal = r.currency && r.currency !== displayCurrency
@@ -300,14 +303,14 @@ export default function History({ onEdit }) {
                   {/* Destructive action — needs a target big enough to hit
                       deliberately, and not so tight against the edit area
                       that it gets tapped by accident. */}
-                  <button
+                  {!isLoan && <button
                     onClick={() => handleDelete(r.id)}
                     title="Delete"
                     aria-label="Delete entry"
                     className="w-8 h-8 grid place-items-center shrink-0 text-gray-400 hover:text-red hover:bg-red-light active:bg-red-light rounded-md transition-colors"
                   >
                     ✕
-                  </button>
+                  </button>}
                 </div>
                 {showsOriginal && (
                   <span className="text-[10px] text-gray-400">orig. {fmtIn(r.amount, r.currency)}</span>

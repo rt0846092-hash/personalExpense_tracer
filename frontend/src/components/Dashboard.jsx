@@ -8,7 +8,7 @@ import {
   getIncomeCats, getExpenseCats,
 } from '../utils/helpers'
 
-export default function Dashboard({ onSeeRemittance }) {
+export default function Dashboard({ onSeeRemittance, onOpenCategory }) {
   const { records, customCats, openingBalances } = useTracker()
   const { displayCurrency, rates, ratesError, loading: ratesLoading } = useCurrency()
   const [period, setPeriod] = useState('1m')
@@ -186,7 +186,9 @@ export default function Dashboard({ onSeeRemittance }) {
               const label = meta.label || 'Uncategorized'
               const pct = ((val / grand) * 100).toFixed(0)
               return (
-                <div key={cat} className="flex items-center gap-2.5">
+                <button key={cat} type="button" onClick={() => onOpenCategory?.({ type: catType, key: cat })}
+                  title={`See everything in ${label}`}
+                  className="w-full flex items-center gap-2.5 text-left rounded-lg -mx-1.5 px-1.5 py-1 hover:bg-gray-50 focus-visible:bg-gray-50">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: meta.color }} />
                   <span className="text-sm flex-1 truncate">{label}</span>
                   {/* The bar is decoration; on a narrow phone it steals the
@@ -196,7 +198,8 @@ export default function Dashboard({ onSeeRemittance }) {
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: meta.color }} />
                   </div>
                   <span className="text-sm font-medium text-right whitespace-nowrap shrink-0">{money(val)}</span>
-                </div>
+                  <span className="text-gray-300 shrink-0" aria-hidden="true">›</span>
+                </button>
               )
             })}
             <div className="flex items-center gap-2.5 pt-2.5 mt-1 border-t border-gray-200 font-bold">

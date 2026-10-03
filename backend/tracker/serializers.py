@@ -1,7 +1,9 @@
 import re
 
 from rest_framework import serializers
-from .models import Record, Category, OpeningBalance, UserPreference
+import datetime
+
+from .models import Record, Category, OpeningBalance, UserPreference, Loan, LoanPayment
 
 
 CURRENCY_CODE = re.compile(r'^[A-Z]{3}$')
@@ -25,9 +27,9 @@ class RecordSerializer(serializers.ModelSerializer):
             'id', 'type', 'account', 'to_account', 'category', 'amount', 'currency',
             'date', 'source', 'note',
             'from_country', 'to_country', 'sent_amount', 'sent_currency', 'recipient',
-            'created_at', 'updated_at',
+            'loan', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'loan', 'created_at', 'updated_at']
 
     def validate_currency(self, value):
         return clean_currency(value)
@@ -43,6 +45,9 @@ class RecordSerializer(serializers.ModelSerializer):
 
         if amount is not None and amount <= 0:
             raise serializers.ValidationError({'amount': 'Amount must be greater than zero.'})
+
+        if rtype in ('loan_in', 'loan_out'):
+            raise serializers.ValidationError({'type': 'Loans are added in the Borrow / Lend section.'})
 
         if rtype == 'transfer':
             if not to_account:
@@ -96,3 +101,64 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
 
     def validate_display_currency(self, value):
         return clean_currency(value)
+
+
+class LoanPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanPayment
+        fields = ['id', 'amount', 'account', 'date', 'note', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_amount(self, value):
+        loan = self.context['loan']
+        if value <= 0:
+            raise serializers.ValidationError('Amount must be greater than zero.')
+        if value > loan.remaining:
+            raise serializers.ValidationError(f'Only {loan.remaining} {loan.currency} is left to pay.')
+        return value
+
+    def validate_date(self, value):
+        if value < self.context['loan'].date:
+            raise serializers.ValidationError("A payment can't be before the loan date.")
+        return value
+
+
+class LoanSerializer(serializers.ModelSerializer):
+    payments = LoanPaymentSerializer(many=True, read_only=True)
+    paid = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    remaining = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Loan
+        fields = ['id', 'direction', 'person', 'amount', 'currency', 'account', 'date', 'due_date', 'note',
+                  'paid', 'remaining', 'status', 'payments', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def get_status(self, loan):
+        if loan.remaining <= 0:
+            return 'paid'
+        if loan.due_date and loan.due_date < datetime.date.today():
+            return 'overdue'
+        return 'open'
+
+    def validate_currency(self, value):
+        return clean_currency(value)
+
+    def validate_person(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Who is this with?')
+        return value
+
+    def validate(self, data):
+        amount = data.get('amount', getattr(self.instance, 'amount', None))
+        if amount is not None and amount <= 0:
+            raise serializers.ValidationError({'amount': 'Amount must be greater than zero.'})
+        if self.instance and amount is not None and amount < self.instance.paid:
+            raise serializers.ValidationError({'amount': f'{self.instance.paid} has already been paid back, so the loan can\'t be smaller than that.'})
+        date = data.get('date', getattr(self.instance, 'date', None))
+        due = data.get('due_date', getattr(self.instance, 'due_date', None))
+        if date and due and due < date:
+            raise serializers.ValidationError({'due_date': 'The due date must be on or after the loan date.'})
+        return data

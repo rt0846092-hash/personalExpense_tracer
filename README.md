@@ -12,7 +12,7 @@ tracker-fullstack/
 └── frontend/       React + Tailwind (Vite) SPA
 ```
 
-## What's new in this pass
+## Features
 
 1. **Sign in / register, usable from any device.** JWT-based auth
    (`djangorestframework-simplejwt`). Every record, category, opening
@@ -30,6 +30,18 @@ tracker-fullstack/
    currency) — the app shows the gap between the two as the transfer fee /
    exchange spread. A compact "Sent abroad" card also sits on the
    Dashboard, linking through to the full Remittance tab.
+
+4. **Borrow and lend.** Record money you borrowed or lent: who, how much,
+   when, and an optional pay-back date. Add partial repayments until it's
+   fully paid, with an "Overdue" warning when the date passes. Each loan and
+   repayment also writes a history entry, so cash and digital balances always
+   include them, and those entries can only be changed from Borrow / Lend so
+   the numbers never drift.
+5. **Category details.** Click any category on the dashboard (Food, Study…)
+   to see every entry inside it: what it was for, the amount, date and
+   account, monthly totals, the biggest item, and a 6-month chart.
+6. **Clear sign-in errors.** A sleeping or unreachable server says so,
+   instead of claiming the password is wrong.
 
 ## Architecture
 
@@ -111,4 +123,4 @@ cd backend
 python manage.py test
 ```
 
-14 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, and login is rate-limited (10 attempts a minute) to stop password guessing.
+23 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, login is rate-limited (10 attempts a minute) to stop password guessing, and loans keep balances correct through borrowing, partial and full repayment, editing and deleting.

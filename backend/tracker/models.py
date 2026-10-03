@@ -8,6 +8,9 @@ class TransactionType(models.TextChoices):
     EXPENSE = 'expense', 'Expense'
     TRANSFER = 'transfer', 'Transfer'
     REMITTANCE = 'remittance', 'Remittance'
+    # Created automatically by the Borrow / Lend section, never typed by hand:
+    LOAN_IN = 'loan_in', 'Loan money in'     # borrowed money, or someone paying me back
+    LOAN_OUT = 'loan_out', 'Loan money out'  # money I lent, or me paying a debt back
 
 
 class Account(models.TextChoices):
@@ -48,6 +51,11 @@ class Record(models.Model):
     sent_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     sent_currency = models.CharField(max_length=8, blank=True, default='')
     recipient = models.CharField(max_length=255, blank=True, default='')
+
+    # Set when this entry was created by a loan or a loan repayment, so it
+    # moves the account balance but can only be changed from Borrow / Lend
+    loan = models.ForeignKey('Loan', on_delete=models.CASCADE, null=True, blank=True, related_name='records')
+    loan_payment = models.OneToOneField('LoanPayment', on_delete=models.CASCADE, null=True, blank=True, related_name='record')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -114,3 +122,50 @@ class UserPreference(models.Model):
 
     def __str__(self):
         return f'Preferences · {self.user_id}'
+
+
+class Loan(models.Model):
+    """Money borrowed from, or lent to, another person."""
+
+    class Direction(models.TextChoices):
+        BORROWED = 'borrowed', 'I borrowed'
+        LENT = 'lent', 'I lent'
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='loans')
+    direction = models.CharField(max_length=10, choices=Direction.choices)
+    person = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    currency = models.CharField(max_length=8, default='NPR')
+    account = models.CharField(max_length=10, choices=Account.choices)
+    date = models.DateField()
+    due_date = models.DateField(null=True, blank=True)
+    note = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f'{self.direction} {self.amount} {self.currency} · {self.person}'
+
+    @property
+    def paid(self):
+        return sum((p.amount for p in self.payments.all()), 0)
+
+    @property
+    def remaining(self):
+        return self.amount - self.paid
+
+
+class LoanPayment(models.Model):
+    """Part (or all) of a loan paid back."""
+
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    account = models.CharField(max_length=10, choices=Account.choices)
+    date = models.DateField()
+    note = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'created_at']

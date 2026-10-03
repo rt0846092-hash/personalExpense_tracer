@@ -93,3 +93,75 @@ class CategoryAndSettingsTests(TrackerTestCase):
         self.assertEqual(self.client.patch("/api/preferences/", {"display_currency": "zzz9"}, format="json").status_code, 400)
         self.assertEqual(self.client.patch("/api/preferences/", {"display_currency": "krw"}, format="json").data["display_currency"], "KRW")
         self.assertEqual(self.client.patch("/api/opening-balance/", {"currency": "nope"}, format="json").status_code, 400)
+
+
+class LoanTests(TrackerTestCase):
+    def borrow(self, **changes):
+        body = {"direction": "borrowed", "person": "Suresh", "amount": "5000", "currency": "NPR",
+                "account": "cash", "date": "2026-10-01", **changes}
+        return self.client.post("/api/loans/", body, format="json")
+
+    def balance_records(self):
+        return list(Record.objects.filter(user=self.me).values_list("type", "amount", "account"))
+
+    def test_borrowing_creates_a_money_in_entry(self):
+        res = self.borrow()
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(str(res.data["remaining"]), "5000.00")
+        self.assertEqual(res.data["status"], "open")
+        self.assertEqual(self.balance_records(), [("loan_in", 5000, "cash")])
+
+    def test_lending_creates_a_money_out_entry(self):
+        self.borrow(direction="lent", account="digital")
+        self.assertEqual(self.balance_records(), [("loan_out", 5000, "digital")])
+
+    def test_partial_and_full_repayment(self):
+        loan = self.borrow().data
+        url = f"/api/loans/{loan['id']}/payments/"
+        res = self.client.post(url, {"amount": "2000", "account": "digital", "date": "2026-10-05"}, format="json")
+        self.assertEqual(str(res.data["remaining"]), "3000.00")
+        self.assertIn(("loan_out", 2000, "digital"), self.balance_records())  # I paid back from digital
+        # Can't pay more than what's left
+        self.assertEqual(self.client.post(url, {"amount": "3500", "account": "cash", "date": "2026-10-06"}, format="json").status_code, 400)
+        res = self.client.post(url, {"amount": "3000", "account": "cash", "date": "2026-10-06"}, format="json")
+        self.assertEqual(res.data["status"], "paid")
+
+    def test_someone_paying_me_back_is_money_in(self):
+        loan = self.borrow(direction="lent").data
+        self.client.post(f"/api/loans/{loan['id']}/payments/", {"amount": "1000", "account": "cash", "date": "2026-10-03"}, format="json")
+        self.assertIn(("loan_in", 1000, "cash"), self.balance_records())
+
+    def test_overdue(self):
+        self.assertEqual(self.borrow(due_date="2026-01-01", date="2025-12-01").data["status"], "overdue")
+        self.assertEqual(self.borrow(due_date="2026-09-01").status_code, 400)  # due before the loan date
+
+    def test_editing_a_loan_updates_its_entry_and_deleting_removes_everything(self):
+        loan = self.borrow().data
+        self.client.post(f"/api/loans/{loan['id']}/payments/", {"amount": "1000", "account": "cash", "date": "2026-10-02"}, format="json")
+        self.client.patch(f"/api/loans/{loan['id']}/", {"amount": "6000"}, format="json")
+        self.assertIn(("loan_in", 6000, "cash"), self.balance_records())
+        self.assertEqual(self.client.patch(f"/api/loans/{loan['id']}/", {"amount": "500"}, format="json").status_code, 400)  # less than already paid
+        self.client.delete(f"/api/loans/{loan['id']}/")
+        self.assertEqual(self.balance_records(), [])
+
+    def test_deleting_a_payment_removes_its_entry(self):
+        loan = self.borrow().data
+        res = self.client.post(f"/api/loans/{loan['id']}/payments/", {"amount": "1000", "account": "cash", "date": "2026-10-02"}, format="json")
+        pid = res.data["payments"][0]["id"]
+        res = self.client.delete(f"/api/loans/{loan['id']}/payments/{pid}/")
+        self.assertEqual(str(res.data["remaining"]), "5000.00")
+        self.assertEqual(len(self.balance_records()), 1)
+
+    def test_loan_entries_are_protected_in_history(self):
+        self.borrow()
+        rec = Record.objects.get(user=self.me)
+        self.assertEqual(self.client.patch(f"/api/records/{rec.id}/", {"amount": "1"}, format="json").status_code, 400)
+        self.assertEqual(self.client.delete(f"/api/records/{rec.id}/").status_code, 400)
+        self.assertEqual(self.add(type="loan_in").status_code, 400)  # can't fake one by hand
+
+    def test_loans_are_private(self):
+        loan = self.borrow().data
+        other = APIClient(); other.force_authenticate(self.other)
+        self.assertEqual(other.get(f"/api/loans/{loan['id']}/").status_code, 404)
+        self.assertEqual(other.post(f"/api/loans/{loan['id']}/payments/", {"amount": "1", "account": "cash", "date": "2026-10-02"}, format="json").status_code, 404)
+        self.assertEqual(other.get("/api/loans/").data["results"] if isinstance(other.get("/api/loans/").data, dict) else other.get("/api/loans/").data, [])

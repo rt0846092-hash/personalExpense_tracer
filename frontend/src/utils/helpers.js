@@ -129,6 +129,8 @@ export function accountBalance(records, openingBalances, account, excludeId = nu
     if (r.type === 'remittance' && r.account === account) bal -= amt
     if (r.type === 'transfer' && r.account === account) bal -= amt
     if (r.type === 'transfer' && r.to_account === account) bal += amt
+    if (r.type === 'loan_in' && r.account === account) bal += amt
+    if (r.type === 'loan_out' && r.account === account) bal -= amt
   })
   return bal
 }
@@ -142,6 +144,8 @@ export function accountInOut(records, account, displayCurrency = null, rates = n
     if (r.type === 'remittance' && r.account === account) outAmt += amt
     if (r.type === 'transfer' && r.account === account) outAmt += amt
     if (r.type === 'transfer' && r.to_account === account) inAmt += amt
+    if (r.type === 'loan_in' && r.account === account) inAmt += amt
+    if (r.type === 'loan_out' && r.account === account) outAmt += amt
   })
   return { inAmt, outAmt }
 }

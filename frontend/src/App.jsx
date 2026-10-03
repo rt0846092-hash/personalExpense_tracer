@@ -8,6 +8,8 @@ import Dashboard from './components/Dashboard.jsx'
 import AddTransactionForm from './components/AddTransactionForm.jsx'
 import History from './components/History.jsx'
 import Remittance from './components/Remittance.jsx'
+import Loans from './components/Loans.jsx'
+import CategoryDetail from './components/CategoryDetail.jsx'
 
 export default function App() {
   const { user, checking } = useAuth()
@@ -31,9 +33,13 @@ export default function App() {
 function AuthenticatedApp() {
   const [tab, setTab] = useState('dashboard')
   const [editingRecord, setEditingRecord] = useState(null)
+  const [openCategory, setOpenCategory] = useState(null) // { type, key } when a category page is open
   const { loading, error, toast } = useTracker()
 
   const goEdit = (record) => {
+    // Loan entries are managed in Borrow / Lend, not the normal Add form
+    if (record.loan) { setOpenCategory(null); setTab('loans'); return }
+    setOpenCategory(null)
     setEditingRecord(record)
     // Remittances have their own dedicated form — the generic Add form has
     // no country/sent-amount fields, so editing one there would silently
@@ -47,6 +53,7 @@ function AuthenticatedApp() {
   // the old record instead of creating one.
   const navigate = (nextTab) => {
     setEditingRecord(null)
+    setOpenCategory(null)
     setTab(nextTab)
   }
 
@@ -65,7 +72,13 @@ function AuthenticatedApp() {
           <div className="text-center py-20 text-gray-400">Loading…</div>
         ) : (
           <>
-            {tab === 'dashboard' && <Dashboard onSeeRemittance={() => navigate('remittance')} />}
+            {tab === 'dashboard' && !openCategory && (
+              <Dashboard onSeeRemittance={() => navigate('remittance')} onOpenCategory={setOpenCategory} />
+            )}
+            {tab === 'dashboard' && openCategory && (
+              <CategoryDetail category={openCategory} onBack={() => setOpenCategory(null)} onEdit={goEdit} />
+            )}
+            {tab === 'loans' && <Loans />}
             {tab === 'add' && (
               <AddTransactionForm editingRecord={editingRecord} onDone={clearEdit} />
             )}

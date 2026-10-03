@@ -143,4 +143,12 @@ export const getPreferences = () =>
 export const savePreferences = (payload) =>
   client.put('/preferences/', payload).then(r => r.data)
 
+export const listLoans = () =>
+  client.get('/loans/').then(r => (Array.isArray(r.data) ? r.data : r.data.results ?? []))
+export const createLoan = (payload) => client.post('/loans/', payload).then(r => r.data)
+export const updateLoan = (id, payload) => client.patch(`/loans/${id}/`, payload).then(r => r.data)
+export const deleteLoan = (id) => client.delete(`/loans/${id}/`)
+export const addLoanPayment = (id, payload) => client.post(`/loans/${id}/payments/`, payload).then(r => r.data)
+export const deleteLoanPayment = (id, paymentId) => client.delete(`/loans/${id}/payments/${paymentId}/`).then(r => r.data)
+
 export default client

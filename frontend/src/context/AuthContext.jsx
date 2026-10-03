@@ -3,6 +3,15 @@ import { tokenStore, fetchMe, loginUser, registerUser, logoutUser } from '../api
 
 const AuthContext = createContext(null)
 
+/* Say what actually went wrong. A sleeping or unreachable server is not a wrong password. */
+function loginErrorMessage(err) {
+  const res = err?.response
+  if (!res) return "Can't reach the server right now. If the app was idle, it can take up to a minute to wake up — please try again."
+  if (res.status === 429) return 'Too many sign-in attempts. Please wait a minute and try again.'
+  if (res.status >= 500) return 'Something went wrong on the server. Please try again in a moment.'
+  return 'Wrong username/email or password.'
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [checking, setChecking] = useState(true)
@@ -42,7 +51,7 @@ export function AuthProvider({ children }) {
       setUser(me)
       return true
     } catch (err) {
-      setAuthError(err?.response?.data?.detail || 'Invalid username or password.')
+      setAuthError(loginErrorMessage(err))
       return false
     }
   }, [])

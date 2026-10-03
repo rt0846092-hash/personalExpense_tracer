@@ -6,6 +6,7 @@ const TrackerContext = createContext(null)
 export function TrackerProvider({ children }) {
   const [records, setRecords] = useState([])
   const [customCats, setCustomCats] = useState([])
+  const [loans, setLoans] = useState([])
   const [openingBalances, setOpeningBalances] = useState({ digital: 0, cash: 0, currency: 'NPR' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,6 +31,19 @@ export function TrackerProvider({ children }) {
     return data
   }, [])
 
+  const refreshLoans = useCallback(async () => {
+    const data = await api.listLoans()
+    setLoans(data)
+    return data
+  }, [])
+
+  // Every loan change also writes history entries, so refresh both
+  const loanAction = useCallback(async (fn) => {
+    const result = await fn()
+    await Promise.all([refreshLoans(), refreshRecords()])
+    return result
+  }, [refreshLoans, refreshRecords])
+
   const refreshOpeningBalance = useCallback(async () => {
     const data = await api.getOpeningBalance()
     setOpeningBalances(data)
@@ -40,7 +54,7 @@ export function TrackerProvider({ children }) {
     (async () => {
       try {
         setLoading(true)
-        await Promise.all([refreshRecords(), refreshCategories(), refreshOpeningBalance()])
+        await Promise.all([refreshRecords(), refreshCategories(), refreshOpeningBalance(), refreshLoans()])
       } catch (e) {
         console.error(e)
         setError('Could not reach the API. Is the Django server running?')
@@ -48,7 +62,7 @@ export function TrackerProvider({ children }) {
         setLoading(false)
       }
     })()
-  }, [refreshRecords, refreshCategories, refreshOpeningBalance])
+  }, [refreshRecords, refreshCategories, refreshOpeningBalance, refreshLoans])
 
   const addRecord = useCallback(async (payload) => {
     await api.createRecord(payload)
@@ -97,6 +111,7 @@ export function TrackerProvider({ children }) {
     addCategory, renameCategory, removeCategory,
     saveOpeningBalances,
     refreshRecords,
+    loans, loanAction,
   }
 
   return <TrackerContext.Provider value={value}>{children}</TrackerContext.Provider>

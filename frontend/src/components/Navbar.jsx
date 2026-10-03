@@ -8,6 +8,7 @@ const TABS = [
   { key: 'add', label: 'Add' },
   { key: 'history', label: 'History' },
   { key: 'remittance', label: 'Remittance' },
+  { key: 'loans', label: 'Borrow / Lend' },
 ]
 
 export default function Navbar({ tab, setTab }) {
