@@ -48,7 +48,7 @@ client.interceptors.response.use(
         if (!refreshPromise) {
           refreshPromise = bare
             .post('/auth/token/refresh/', { refresh })
-            .then((r) => { tokenStore.setTokens(r.data.access); return r.data.access })
+            .then((r) => { tokenStore.setTokens(r.data.access, r.data.refresh); return r.data.access })
             .finally(() => { refreshPromise = null })
         }
         const newAccess = await refreshPromise
@@ -68,6 +68,11 @@ client.interceptors.response.use(
 export const registerUser = (payload) => bare.post('/auth/register/', payload).then(r => r.data)
 export const loginUser = (payload) => bare.post('/auth/login/', payload).then(r => r.data)
 export const fetchMe = () => client.get('/auth/me/').then(r => r.data)
+export const verifyEmail = (payload) => bare.post('/auth/verify-email/', payload).then(r => r.data)
+export const resendCode = (payload) => bare.post('/auth/resend-code/', payload).then(r => r.data)
+export const googleLogin = (credential) => bare.post('/auth/google/', { credential }).then(r => r.data)
+export const requestPasswordReset = (email) => bare.post('/auth/password-reset/', { email }).then(r => r.data)
+export const confirmPasswordReset = (payload) => bare.post('/auth/password-reset/confirm/', payload).then(r => r.data)
 export const logoutUser = () => {
   const refresh = tokenStore.getRefresh()
   if (!refresh) return Promise.resolve()

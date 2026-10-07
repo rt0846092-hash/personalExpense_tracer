@@ -9,3 +9,5 @@ dj-database-url==2.2.0
 python-decouple==3.8
 gunicorn==22.0.0
 whitenoise==6.7.0
+google-auth==2.35.0
+requests==2.32.3

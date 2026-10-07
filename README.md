@@ -40,7 +40,11 @@ tracker-fullstack/
 5. **Category details.** Click any category on the dashboard (Food, Study…)
    to see every entry inside it: what it was for, the amount, date and
    account, monthly totals, the biggest item, and a 6-month chart.
-6. **Clear sign-in errors.** A sleeping or unreachable server says so,
+6. **Sign in your way.** "Continue with Google", or a username/email and
+   password. New accounts confirm their email with a 6-digit code, and
+   "Forgot password?" emails a code to set a new one. Codes are stored
+   hashed, expire after 10 minutes, and allow only 5 tries.
+7. **Clear sign-in errors.** A sleeping or unreachable server says so,
    instead of claiming the password is wrong.
 
 ## Architecture
@@ -116,6 +120,16 @@ Open `http://localhost:5173`, create an account, and go. Make sure
   displaying amounts unconverted rather than guessing a rate.
 - History can import records from CSV; bulk JSON import isn't supported yet.
 
+## Email and Google sign-in setup
+
+| Setting (Render) | What it is |
+| --- | --- |
+| `BREVO_API_KEY` | API key from [Brevo](https://www.brevo.com) (free, 300 emails a day). Sends the 6-digit codes. Free Render servers block SMTP, so Brevo's HTTPS API is used instead of Gmail. |
+| `EMAIL_SENDER` | The "from" address. Must be confirmed as a sender in Brevo. Defaults to `rt0846092@gmail.com`. |
+| `GOOGLE_CLIENT_ID` | Optional; defaults to this app's Google OAuth Client ID. |
+
+Without `BREVO_API_KEY`, codes are printed to the server log and new sign-ups skip the code step, so local development needs no setup.
+
 ## Tests
 
 ```bash
@@ -123,4 +137,4 @@ cd backend
 python manage.py test
 ```
 
-23 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, login is rate-limited (10 attempts a minute) to stop password guessing, and loans keep balances correct through borrowing, partial and full repayment, editing and deleting.
+48 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, login is rate-limited (10 attempts a minute) to stop password guessing, sign-up codes, password reset and Google sign-in follow their security rules, and loans keep balances correct through borrowing, partial and full repayment, editing and deleting.
