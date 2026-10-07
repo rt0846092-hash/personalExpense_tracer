@@ -68,6 +68,7 @@ client.interceptors.response.use(
 export const registerUser = (payload) => bare.post('/auth/register/', payload).then(r => r.data)
 export const loginUser = (payload) => bare.post('/auth/login/', payload).then(r => r.data)
 export const fetchMe = () => client.get('/auth/me/').then(r => r.data)
+export const getAuthOptions = () => bare.get('/auth/options/').then(r => r.data)
 export const verifyEmail = (payload) => bare.post('/auth/verify-email/', payload).then(r => r.data)
 export const resendCode = (payload) => bare.post('/auth/resend-code/', payload).then(r => r.data)
 export const googleLogin = (credential) => bare.post('/auth/google/', { credential }).then(r => r.data)

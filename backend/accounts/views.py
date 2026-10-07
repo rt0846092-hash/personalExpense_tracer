@@ -40,6 +40,15 @@ class PublicView(APIView):
     throttle_scope = 'auth'
 
 
+class AuthOptionsView(APIView):
+    """Which sign-in features are switched on, so the website only shows what works."""
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        return Response({'email_codes': codes.email_configured()})
+
+
 class ThrottledLoginView(TokenObtainPairView):
     """Login with username or email, limited to stop password guessing.
 

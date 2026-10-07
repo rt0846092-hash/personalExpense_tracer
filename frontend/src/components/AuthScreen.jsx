@@ -14,6 +14,11 @@ export default function AuthScreen() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resendWait, setResendWait] = useState(0)
+  // Only offer email features when the server can actually send emails
+  const [emailCodes, setEmailCodes] = useState(false)
+  useEffect(() => {
+    api.getAuthOptions().then(o => setEmailCodes(!!o.email_codes)).catch(() => {})
+  }, [])
   const { login, register, verifyEmail, resetPassword, loginWithGoogle, authError, setAuthError } = useAuth()
 
   // Count down until "Send a new code" can be used again
@@ -127,7 +132,7 @@ export default function AuthScreen() {
               <label className="block text-[13px] font-medium text-gray-600 mb-1" htmlFor="auth-email">Email</label>
               <input id="auth-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required
                 autoComplete="email" className="input" />
-              {mode === 'register' && <p className="text-xs text-gray-400 mt-1">We’ll send a code here to confirm it’s really yours.</p>}
+              {mode === 'register' && emailCodes && <p className="text-xs text-gray-400 mt-1">We’ll send a code here to confirm it’s really yours.</p>}
             </div>
           )}
 
@@ -148,7 +153,7 @@ export default function AuthScreen() {
                 <label className="block text-[13px] font-medium text-gray-600" htmlFor="auth-password">
                   {mode === 'reset' ? 'New password' : 'Password'}
                 </label>
-                {mode === 'login' && (
+                {mode === 'login' && emailCodes && (
                   <button type="button" onClick={() => { setEmail(username.includes('@') ? username : ''); go('forgot') }}
                     className="text-xs text-blue hover:underline">Forgot password?</button>
                 )}

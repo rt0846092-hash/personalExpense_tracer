@@ -39,7 +39,9 @@ export default function GoogleButton({ onCredential, text = 'continue_with' }) {
         })
         window.google.accounts.id.renderButton(box.current, {
           theme: 'outline', size: 'large', shape: 'rectangular', text,
-          width: Math.min(box.current.offsetWidth || 336, 400),
+          logo_alignment: 'center',
+          locale: 'en', // otherwise Google uses the browser's language (e.g. Korean)
+          width: Math.min(box.current.offsetWidth || 336, 400), // match the form's width
         })
       })
       .catch(() => !cancelled && setFailed(true))

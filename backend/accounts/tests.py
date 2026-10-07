@@ -31,6 +31,16 @@ class AuthTestCase(TestCase):
         return self.post('register/', {'username': username, 'email': email, 'password': password})
 
 
+class AuthOptionsTests(AuthTestCase):
+    @override_settings(MAILJET_API_KEY='', MAILJET_SECRET_KEY='', BREVO_API_KEY='', EMAIL_HOST_PASSWORD='')
+    def test_email_codes_off_when_nothing_configured(self):
+        self.assertEqual(self.c.get('/api/auth/options/').data, {'email_codes': False})
+
+    @override_settings(EMAIL_HOST_PASSWORD='app-password', MAILJET_API_KEY='', BREVO_API_KEY='')
+    def test_email_codes_on_when_configured(self):
+        self.assertTrue(self.c.get('/api/auth/options/').data['email_codes'])
+
+
 class LoginTests(AuthTestCase):
     def test_login_with_username_or_email(self):
         User.objects.create_user('roshan', 'R@Example.com', 'Strong-Pass-123')

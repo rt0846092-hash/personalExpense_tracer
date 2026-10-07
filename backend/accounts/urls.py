@@ -2,11 +2,12 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 
 from .views import (
-    GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
+    AuthOptionsView, GoogleLoginView, MeView, PasswordResetConfirmView, PasswordResetRequestView,
     RegisterView, ResendCodeView, ThrottledLoginView, VerifyEmailView,
 )
 
 urlpatterns = [
+    path('options/', AuthOptionsView.as_view(), name='auth-options'),
     path('register/', RegisterView.as_view(), name='register'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('resend-code/', ResendCodeView.as_view(), name='resend-code'),
