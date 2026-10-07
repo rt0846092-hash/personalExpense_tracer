@@ -124,11 +124,13 @@ Open `http://localhost:5173`, create an account, and go. Make sure
 
 | Setting (Render) | What it is |
 | --- | --- |
-| `BREVO_API_KEY` | API key from [Brevo](https://www.brevo.com) (free, 300 emails a day). Sends the 6-digit codes. Free Render servers block SMTP, so Brevo's HTTPS API is used instead of Gmail. |
-| `EMAIL_SENDER` | The "from" address. Must be confirmed as a sender in Brevo. Defaults to `rt0846092@gmail.com`. |
+| `MAILJET_API_KEY` | API key from [Mailjet](https://www.mailjet.com) (free, 200 emails a day). Sends the 6-digit codes. Free Render servers block SMTP, so Mailjet's HTTPS API is used instead of Gmail. |
+| `MAILJET_SECRET_KEY` | The secret key that goes with it. Keep it private. |
+| `BREVO_API_KEY` | Optional alternative to Mailjet. |
+| `EMAIL_SENDER` | The "from" address. Must be a confirmed sender in Mailjet. Defaults to `rt0846092@gmail.com`. |
 | `GOOGLE_CLIENT_ID` | Optional; defaults to this app's Google OAuth Client ID. |
 
-Without `BREVO_API_KEY`, codes are printed to the server log and new sign-ups skip the code step, so local development needs no setup.
+Without Mailjet (or Brevo) keys, codes are printed to the server log and new sign-ups skip the code step, so local development needs no setup.
 
 ## Tests
 
@@ -137,4 +139,4 @@ cd backend
 python manage.py test
 ```
 
-48 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, login is rate-limited (10 attempts a minute) to stop password guessing, sign-up codes, password reset and Google sign-in follow their security rules, and loans keep balances correct through borrowing, partial and full repayment, editing and deleting.
+51 automated tests cover the most important behaviour: each user only ever sees and changes their own records, bad dates and months return a clear error, currencies must be real 3-letter codes, duplicate categories are refused with a message, transfers need two different accounts, login is rate-limited (10 attempts a minute) to stop password guessing, sign-up codes, password reset and Google sign-in follow their security rules, and loans keep balances correct through borrowing, partial and full repayment, editing and deleting.

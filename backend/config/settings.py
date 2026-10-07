@@ -166,11 +166,14 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:
 # For quick local dev you can instead set CORS_ALLOW_ALL_ORIGINS = True
 
 # --- Email (6-digit codes) ---------------------------------------------
-# Production sends through Brevo's API (BREVO_API_KEY), because free Render
-# servers block SMTP. Gmail SMTP (EMAIL_HOST_PASSWORD) still works locally.
-# With neither set, emails are printed to the log and sign-up skips the code.
+# Production sends through Mailjet's API (MAILJET_API_KEY + MAILJET_SECRET_KEY),
+# because free Render servers block SMTP. Brevo (BREVO_API_KEY) also works, and
+# Gmail SMTP (EMAIL_HOST_PASSWORD) is for local use or paid servers.
+# With none set, emails are printed to the log and sign-up skips the code.
+MAILJET_API_KEY = config('MAILJET_API_KEY', default='')
+MAILJET_SECRET_KEY = config('MAILJET_SECRET_KEY', default='')
 BREVO_API_KEY = config('BREVO_API_KEY', default='')
-EMAIL_SENDER = config('EMAIL_SENDER', default='rt0846092@gmail.com')  # must be a confirmed sender in Brevo
+EMAIL_SENDER = config('EMAIL_SENDER', default='rt0846092@gmail.com')  # must be a confirmed sender in Mailjet/Brevo
 EMAIL_SENDER_NAME = config('EMAIL_SENDER_NAME', default='Expense Tracker')
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default=EMAIL_SENDER)
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')

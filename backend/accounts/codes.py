@@ -28,13 +28,28 @@ def _hash(code):
 
 
 def email_configured():
-    return bool(settings.BREVO_API_KEY or settings.EMAIL_HOST_PASSWORD)
+    return bool((settings.MAILJET_API_KEY and settings.MAILJET_SECRET_KEY)
+                or settings.BREVO_API_KEY or settings.EMAIL_HOST_PASSWORD)
 
 
 def deliver(to, subject, body):
-    """Send one email. Brevo works over HTTPS, which free Render servers allow;
-    plain SMTP (Gmail) is kept for local use or paid servers."""
-    if settings.BREVO_API_KEY:
+    """Send one email. Mailjet and Brevo work over HTTPS, which free Render servers
+    allow; plain SMTP (Gmail) is kept for local use or paid servers."""
+    if settings.MAILJET_API_KEY and settings.MAILJET_SECRET_KEY:
+        res = requests.post(
+            'https://api.mailjet.com/v3.1/send',
+            auth=(settings.MAILJET_API_KEY, settings.MAILJET_SECRET_KEY),
+            json={'Messages': [{
+                'From': {'Email': settings.EMAIL_SENDER, 'Name': settings.EMAIL_SENDER_NAME},
+                'To': [{'Email': to}], 'Subject': subject, 'TextPart': body,
+            }]},
+            timeout=10,
+        )
+        res.raise_for_status()
+        status = (res.json().get('Messages') or [{}])[0].get('Status')
+        if status != 'success':
+            raise RuntimeError(f'Mailjet did not send the email: {res.text[:300]}')
+    elif settings.BREVO_API_KEY:
         res = requests.post(
             'https://api.brevo.com/v3/smtp/email',
             headers={'api-key': settings.BREVO_API_KEY, 'accept': 'application/json'},

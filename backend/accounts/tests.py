@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 from .models import EmailCode
 
 User = get_user_model()
-EMAIL_ON = dict(BREVO_API_KEY='', EMAIL_HOST_PASSWORD='app-password', EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+EMAIL_ON = dict(MAILJET_API_KEY='', MAILJET_SECRET_KEY='', BREVO_API_KEY='', EMAIL_HOST_PASSWORD='app-password', EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 
 
 def last_code():
@@ -107,7 +107,7 @@ class SignupWithCodeTests(AuthTestCase):
         EmailCode.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
         self.assertEqual(self.signup(username='other').status_code, 201)
 
-    @override_settings(EMAIL_HOST_PASSWORD='', BREVO_API_KEY='')
+    @override_settings(EMAIL_HOST_PASSWORD='', BREVO_API_KEY='', MAILJET_API_KEY='', MAILJET_SECRET_KEY='')
     def test_without_email_setup_signup_works_immediately(self):
         res = self.signup()
         self.assertIn('access', res.data)
@@ -119,9 +119,49 @@ class SignupWithCodeTests(AuthTestCase):
         self.assertFalse(res.data['email_sent'])
 
 
-@override_settings(**EMAIL_ON)
+MAILJET_ON = dict(MAILJET_API_KEY='mj-public', MAILJET_SECRET_KEY='mj-secret', BREVO_API_KEY='',
+                  EMAIL_HOST_PASSWORD='', EMAIL_SENDER='rt0846092@gmail.com')
+
+
+class MailjetTests(AuthTestCase):
+    def mailjet_reply(self, status_word='success'):
+        return mock.Mock(**{'raise_for_status.return_value': None,
+                            'json.return_value': {'Messages': [{'Status': status_word}]}, 'text': '{}'})
+
+    @override_settings(**MAILJET_ON)
+    def test_codes_go_through_mailjet(self):
+        with mock.patch('accounts.codes.requests.post', return_value=self.mailjet_reply()) as post:
+            res = self.signup()
+        self.assertTrue(res.data['email_sent'])
+        sent = post.call_args
+        self.assertEqual(sent.args[0], 'https://api.mailjet.com/v3.1/send')
+        self.assertEqual(sent.kwargs['auth'], ('mj-public', 'mj-secret'))
+        msg = sent.kwargs['json']['Messages'][0]
+        self.assertEqual(msg['To'], [{'Email': 'r@example.com'}])
+        self.assertEqual(msg['From']['Email'], 'rt0846092@gmail.com')
+        self.assertRegex(msg['Subject'], r'^\d{6} is your')
+        # The code in the email really unlocks the account
+        code = re.search(r'\n\s+(\d{6})\n', msg['TextPart']).group(1)
+        self.assertEqual(self.post('verify-email/', {'email': 'r@example.com', 'code': code}).status_code, 200)
+
+    @override_settings(**MAILJET_ON)
+    def test_mailjet_refusal_is_reported_not_crashed(self):
+        with mock.patch('accounts.codes.requests.post', return_value=self.mailjet_reply('error')):
+            res = self.signup()
+        self.assertEqual(res.status_code, 201)
+        self.assertFalse(res.data['email_sent'])
+
+    @override_settings(**MAILJET_ON)
+    def test_forgot_password_through_mailjet(self):
+        User.objects.create_user('roshan', 'r@example.com', 'Old-Pass-123x')
+        with mock.patch('accounts.codes.requests.post', return_value=self.mailjet_reply()) as post:
+            self.assertEqual(self.post('password-reset/', {'email': 'r@example.com'}).status_code, 200)
+        self.assertIn('password reset code', post.call_args.kwargs['json']['Messages'][0]['Subject'])
+
+
 class BrevoTests(AuthTestCase):
-    @override_settings(BREVO_API_KEY='xkeysib-test', EMAIL_SENDER='rt0846092@gmail.com', EMAIL_HOST_PASSWORD='')
+    @override_settings(BREVO_API_KEY='xkeysib-test', EMAIL_SENDER='rt0846092@gmail.com', EMAIL_HOST_PASSWORD='',
+                       MAILJET_API_KEY='', MAILJET_SECRET_KEY='')
     def test_codes_go_through_brevo(self):
         with mock.patch('accounts.codes.requests.post') as post:
             res = self.signup()
@@ -133,7 +173,7 @@ class BrevoTests(AuthTestCase):
         self.assertEqual(sent.kwargs['json']['sender']['email'], 'rt0846092@gmail.com')
         self.assertRegex(sent.kwargs['json']['subject'], r'^\d{6} is your')
 
-    @override_settings(BREVO_API_KEY='bad-key', EMAIL_HOST_PASSWORD='')
+    @override_settings(BREVO_API_KEY='bad-key', EMAIL_HOST_PASSWORD='', MAILJET_API_KEY='', MAILJET_SECRET_KEY='')
     def test_brevo_error_is_reported_not_crashed(self):
         import requests
         failing = mock.Mock(**{'raise_for_status.side_effect': requests.HTTPError('401 Unauthorized')})
